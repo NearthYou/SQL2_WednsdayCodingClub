@@ -1,0 +1,14 @@
+build/
+bin/
+out/
+*.exe
+*.o
+*.obj
+*.tmp
+*.bak
+*.log
+data/input.sql
+data/input.qsql
+data/books.bin
+data/perf_books.bin
+data/test_*.bin
