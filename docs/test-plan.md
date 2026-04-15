@@ -1,38 +1,38 @@
-# Test Plan
+# 테스트 계획
 
-## Unit Tests
-- batch split with string-literal semicolons
-- empty statement rejection
-- lexer and parser for `SELECT`
-- lexer and parser for `INSERT`
-- B+ tree insert and search
-- qsql write and read round-trip
-- data save and load round-trip
-- bad data header handling
-- rollback state restore
+## 단위 테스트
+- 문자열 리터럴 안 세미콜론을 포함한 배치 분리
+- 빈 문장 거부
+- `SELECT`용 lexer와 parser
+- `INSERT`용 lexer와 parser
+- B+ 트리 삽입과 검색
+- qsql 쓰기/읽기 round-trip
+- data 저장/로드 round-trip
+- 잘못된 데이터 헤더 처리
+- 롤백 상태 복구
 
-## Function Tests
-- `SELECT` by `id`
-- `INSERT` then `SELECT`
-- bad table name
-- bad selected column
-- zero-row result
-- missing semicolon
-- bad `INSERT` value count
-- default file search for `data/input.sql`
-- default file search for `data/input.qsql`
+## 기능 테스트
+- `id` 기준 `SELECT`
+- `INSERT` 후 `SELECT`
+- 잘못된 테이블 이름
+- 잘못된 선택 컬럼
+- 0건 조회 결과
+- 세미콜론 누락
+- 잘못된 `INSERT` 값 개수
+- `data/input.sql` 기본 탐색
+- `data/input.qsql` 기본 탐색
 
-## Manual Smoke Tests
-- interactive CLI mode with quoted input
-- interactive file mode with default path
-- demo batch from `data/demo_queries.sql`
-- temp-file save path during successful `INSERT`
+## 수동 스모크 테스트
+- 큰따옴표 입력을 사용하는 대화형 CLI 모드
+- 기본 경로를 사용하는 대화형 파일 모드
+- `data/demo_queries.sql` 데모 배치 실행
+- 성공적인 `INSERT` 중 임시 파일 저장 경로 확인
 
-## Performance Tests
-- build `gen_perf`
-- generate `data/perf_books.bin`
-- run B+ tree lookup by `id`
-- run linear scan by `author`
-- run linear scan by `genre`
-- record exact command, data size, and measured time
+## 성능 테스트
+- `gen_perf` 빌드
+- `data/perf_books.bin` 생성
+- `id` 기준 B+ 트리 조회 실행
+- `author` 기준 선형 탐색 실행
+- `genre` 기준 선형 탐색 실행
+- 실제 명령, 데이터 크기, 측정 시간을 함께 기록
 

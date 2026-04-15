@@ -1,37 +1,37 @@
-# Decision Log
+# 의사결정 기록
 
-## 1. One Working Log File
-- Problem: The original request mentioned both `AGENTS.md` and `agent.md`.
-- Options: keep both, mirror content, merge into one.
-- Choice: merge into `AGENTS.md`.
-- Why: one source of truth is easier to maintain in a long session.
-- Impact: progress tracking lives in the repo root and is always updated in one file.
+## 1. 작업 로그 파일 하나로 통합
+- 문제: 원래 요청에는 `AGENTS.md`와 `agent.md`가 모두 등장했다.
+- 선택지: 둘 다 유지하기, 내용을 복제하기, 하나로 합치기.
+- 선택: `AGENTS.md` 하나로 합친다.
+- 이유: 세션이 길어질수록 한 곳만 갱신하는 편이 관리가 쉽다.
+- 영향: 진행 상황과 규칙 관리는 저장소 루트의 `AGENTS.md` 하나에만 기록한다.
 
-## 2. Reduced Demo Schema
-- Problem: The earlier draft schema had more columns than needed for the current demo.
-- Options: keep the larger schema, reduce to a smaller demo schema.
-- Choice: `id`, `title`, `author`, `genre`.
-- Why: the smaller schema keeps code, tests, and output easier to follow.
-- Impact: `INSERT` takes 3 values and docs/examples match the reduced table.
+## 2. 축소된 데모 스키마 사용
+- 문제: 초기 초안 스키마에는 현재 데모에 꼭 필요하지 않은 컬럼이 더 많았다.
+- 선택지: 큰 스키마 유지, 작은 데모 스키마로 축소.
+- 선택: `id`, `title`, `author`, `genre`.
+- 이유: 스키마가 작을수록 코드, 테스트, 출력 형식이 더 읽기 쉽다.
+- 영향: `INSERT`는 3개 값만 받고, 문서와 예시도 이 스키마에 맞춘다.
 
-## 3. Fixed-Size Binary Records
-- Problem: Variable-length strings save space but make I/O and debugging harder.
-- Options: variable-length strings, fixed-size strings.
-- Choice: fixed-size strings.
-- Why: simpler code and safer beginner-level file parsing.
-- Impact: data files are larger, but logic is clear and stable.
+## 3. 고정 길이 바이너리 레코드
+- 문제: 가변 길이 문자열은 공간은 절약하지만 I/O와 디버깅이 복잡해진다.
+- 선택지: 가변 길이 문자열, 고정 길이 문자열.
+- 선택: 고정 길이 문자열.
+- 이유: 구현이 단순하고, 초보자도 안전하게 파일 파싱 흐름을 이해할 수 있다.
+- 영향: 데이터 파일 크기는 커지지만, 포맷과 코드가 더 명확해진다.
 
-## 4. B+ Tree Scope
-- Problem: Which lookups should use the B+ tree.
-- Options: all searchable columns, only `id`.
-- Choice: only `id`.
-- Why: the requirement is strict and the code stays readable.
-- Impact: `author`, `genre`, and `title` always use linear scan.
+## 4. B+ 트리 적용 범위
+- 문제: 어떤 조회에 B+ 트리를 적용할지 결정해야 했다.
+- 선택지: 검색 가능한 모든 컬럼, `id`만.
+- 선택: `id`만 사용.
+- 이유: 요구사항이 명확하고, 코드도 가장 읽기 쉽게 유지할 수 있다.
+- 영향: `author`, `genre`, `title`은 항상 선형 탐색으로 처리한다.
 
-## 5. Rollback Strategy
-- Problem: How to roll back writes without deep-copying the whole cache.
-- Options: full cache copy, undo log, truncate-plus-rebuild.
-- Choice: truncate rows back to original count, restore `next_id`, rebuild B+ tree.
-- Why: only `INSERT` mutates state today, so this is the clearest approach.
-- Impact: rollback code is short and easy to explain.
+## 5. 롤백 방식
+- 문제: 전체 캐시를 깊은 복사하지 않고 쓰기 작업을 어떻게 롤백할지 정해야 했다.
+- 선택지: 전체 캐시 복사, undo log, 행 수 복구 + 인덱스 재구성.
+- 선택: 원래 행 수로 되돌리고 `next_id`를 복원한 뒤 B+ 트리를 다시 만든다.
+- 이유: 현재 변경 연산이 `INSERT` 하나뿐이라 가장 짧고 읽기 쉬운 방법이다.
+- 영향: 롤백 코드가 단순해지고 설명도 쉬워진다.
 

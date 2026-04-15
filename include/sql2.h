@@ -191,6 +191,7 @@ typedef struct {
     char file[PATH_LEN];
     char data[PATH_LEN];
     int help;
+    int sum_only;
 } Opts;
 
 double now_ms(void);
@@ -234,7 +235,9 @@ Err db_add(Db *db, const char *title, const char *author, const char *genre,
            int *new_id, char *err, size_t cap);
 Err db_reidx(Db *db, char *err, size_t cap);
 
-Err run_qry(Db *db, const Qry *qry, StrBuf *out, char *err, size_t cap);
-Err run_batch(Db *db, const char *sql, StrBuf *out, char *err, size_t cap);
+Err run_qry(Db *db, const Qry *qry, int sum_only, StrBuf *out, char *err,
+            size_t cap);
+Err run_batch(Db *db, const char *sql, int sum_only, StrBuf *out, char *err,
+              size_t cap);
 
 #endif

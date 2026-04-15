@@ -1,20 +1,20 @@
-# Issue Draft 2
+# 이슈 초안 2
 
-## Title
-Add binary storage, cache sync, rollback, and B+ tree index
+## 제목
+바이너리 저장소, 캐시 동기화, 롤백, B+ 트리 인덱스 추가
 
-## Body
-Implement the persistent storage and transaction path for the `books` demo.
+## 본문
+`books` 데모를 위한 영속 저장과 트랜잭션 경로를 구현합니다.
 
-### Scope
-- `BKDB` storage format
-- cache load/save
-- temp-file replace flow
-- rollback on failed batch
-- `id` B+ tree build and search
+### 범위
+- `BKDB` 저장 포맷
+- 캐시 load/save
+- 임시 파일 교체 흐름
+- 배치 실패 시 롤백
+- `id` 기준 B+ 트리 생성과 검색
 
-### Review Points
-- data format checks
-- rollback consistency
-- `id` lookup path
+### 리뷰 포인트
+- 데이터 포맷 검증
+- 롤백 일관성
+- `id` 조회 경로
 

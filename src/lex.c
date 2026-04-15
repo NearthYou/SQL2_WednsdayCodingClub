@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* 요약: 단어가 예약어인지 검사해 키워드 종류를 정한다. */
 static Kw find_kw(const char *txt) {
     if (str_ieq(txt, "SELECT")) {
         return KW_SELECT;
@@ -27,6 +28,7 @@ static Kw find_kw(const char *txt) {
     return KW_NONE;
 }
 
+/* 요약: 토큰 하나를 토큰 목록 끝에 추가한다. */
 static Err push_tok(TokList *out, Tok tok) {
     Tok *next;
 
@@ -42,6 +44,7 @@ static Err push_tok(TokList *out, Tok tok) {
     return ERR_OK;
 }
 
+/* 요약: 문장 끝을 뜻하는 END 토큰을 넣는다. */
 static Err push_end(TokList *out, size_t pos) {
     Tok tok;
 
@@ -51,6 +54,7 @@ static Err push_end(TokList *out, size_t pos) {
     return push_tok(out, tok);
 }
 
+/* 요약: 식별자나 키워드 단어를 토큰으로 읽는다. */
 static Err lex_word(const char *sql, size_t *at, TokList *out) {
     size_t pos;
     size_t len;
@@ -73,6 +77,7 @@ static Err lex_word(const char *sql, size_t *at, TokList *out) {
     return push_tok(out, tok);
 }
 
+/* 요약: 정수 리터럴을 토큰으로 읽는다. */
 static Err lex_int(const char *sql, size_t *at, TokList *out) {
     size_t pos;
     size_t len;
@@ -95,6 +100,7 @@ static Err lex_int(const char *sql, size_t *at, TokList *out) {
     return push_tok(out, tok);
 }
 
+/* 요약: 작은따옴표 문자열 리터럴을 토큰으로 읽는다. */
 static Err lex_str(const char *sql, size_t *at, TokList *out, char *err,
                    size_t cap) {
     size_t pos;
@@ -133,6 +139,7 @@ static Err lex_str(const char *sql, size_t *at, TokList *out, char *err,
     return ERR_LEX;
 }
 
+/* 요약: SQL 한 문장을 토큰 목록으로 바꾼다. */
 Err lex_stmt(const char *sql, TokList *out, char *err, size_t cap) {
     size_t at;
     Tok tok;
@@ -204,4 +211,3 @@ Err lex_stmt(const char *sql, TokList *out, char *err, size_t cap) {
     }
     return push_end(out, at);
 }
-

@@ -1,20 +1,20 @@
-# Issue Draft 3
+# 이슈 초안 3
 
-## Title
-Finish tests, docs, perf tooling, and CI
+## 제목
+테스트, 문서, 성능 도구, CI 마무리
 
-## Body
-Finalize the learning project with repeatable validation and demo material.
+## 본문
+학습용 프로젝트를 반복 가능한 검증 흐름과 데모 자료까지 포함해 마무리합니다.
 
-### Scope
-- unit tests
-- function tests
-- perf generator
-- README and docs
+### 범위
+- 단위 테스트
+- 기능 테스트
+- 성능 데이터 생성기
+- README 및 문서
 - GitHub Actions CI
 
-### Review Points
-- docs match actual behavior
-- only real perf numbers are recorded
-- CI runs the same test flow as local scripts
+### 리뷰 포인트
+- 문서가 실제 동작과 일치하는지
+- 성능 문서에 실측값만 기록됐는지
+- CI가 로컬 스크립트와 같은 테스트 흐름을 도는지
 

@@ -11,6 +11,7 @@ enum {
     COL_GENRE
 };
 
+/* 요약: 컬럼 이름을 내부 컬럼 번호로 바꾼다. */
 static int col_id(const char *name) {
     if (str_ieq(name, "id")) {
         return COL_ID;
@@ -27,6 +28,7 @@ static int col_id(const char *name) {
     return -1;
 }
 
+/* 요약: 내부 컬럼 번호를 화면용 이름으로 바꾼다. */
 static const char *col_name(int cid) {
     switch (cid) {
     case COL_ID:
@@ -42,10 +44,34 @@ static const char *col_name(int cid) {
     }
 }
 
+/* 요약: 탐색 방식을 사람이 읽는 이름으로 바꾼다. */
 static const char *scan_name(ScanKind scan) {
     return scan == SCAN_BTREE ? "B+Tree" : "Linear";
 }
 
+/* 요약: summary 전용 출력 제목을 만든다. */
+static const char *sum_head(const Qry *qry) {
+    int cid;
+
+    if (!qry->cond.used) {
+        return "full scan";
+    }
+    cid = col_id(qry->cond.col);
+    switch (cid) {
+    case COL_ID:
+        return "id lookup";
+    case COL_TITLE:
+        return "title lookup";
+    case COL_AUTHOR:
+        return "author lookup";
+    case COL_GENRE:
+        return "genre lookup";
+    default:
+        return "query summary";
+    }
+}
+
+/* 요약: 조회 결과 집합에 행 인덱스를 하나 추가한다. */
 static Err row_add(RowSet *set, int idx) {
     int *next;
 
@@ -61,6 +87,7 @@ static Err row_add(RowSet *set, int idx) {
     return ERR_OK;
 }
 
+/* 요약: 한 셀 값을 문자열로 바꿔 출력에 쓴다. */
 static const char *cell_txt(const Book *row, int cid, char *buf, size_t cap) {
     switch (cid) {
     case COL_ID:
@@ -77,6 +104,7 @@ static const char *cell_txt(const Book *row, int cid, char *buf, size_t cap) {
     }
 }
 
+/* 요약: 한 행이 WHERE 조건과 맞는지 검사한다. */
 static int row_match(const Book *row, const Cond *cond, char *err, size_t cap) {
     int cid;
 
@@ -108,6 +136,7 @@ static int row_match(const Book *row, const Cond *cond, char *err, size_t cap) {
     return strcmp(row->genre, cond->val.str) == 0;
 }
 
+/* 요약: 조건에 맞는 행 인덱스를 찾고 시간도 잰다. */
 static Err find_rows(Db *db, const Qry *qry, RowSet *set, char *err,
                      size_t cap) {
     double a;
@@ -154,6 +183,7 @@ static Err find_rows(Db *db, const Qry *qry, RowSet *set, char *err,
     return ERR_OK;
 }
 
+/* 요약: SELECT가 요청한 컬럼 목록을 내부 번호 배열로 만든다. */
 static Err find_proj(const Qry *qry, int *cols, size_t *ncol, char *err,
                      size_t cap) {
     size_t i;
@@ -179,6 +209,7 @@ static Err find_proj(const Qry *qry, int *cols, size_t *ncol, char *err,
     return ERR_OK;
 }
 
+/* 요약: 표 출력에 쓰는 가로 구분선을 추가한다. */
 static Err add_sep(StrBuf *out, size_t *w, size_t ncol) {
     size_t i;
     Err res;
@@ -204,8 +235,9 @@ static Err add_sep(StrBuf *out, size_t *w, size_t ncol) {
     return sb_add(out, "\n");
 }
 
-static Err print_sel(const Db *db, const Qry *qry, const RowSet *set, StrBuf *out,
-                     char *err, size_t cap) {
+/* 요약: SELECT 결과를 표나 요약 형식으로 출력 버퍼에 쓴다. */
+static Err print_sel(const Db *db, const Qry *qry, const RowSet *set,
+                     int sum_only, StrBuf *out, char *err, size_t cap) {
     int cols[MAX_COL];
     size_t ncol;
     size_t w[MAX_COL];
@@ -218,6 +250,21 @@ static Err print_sel(const Db *db, const Qry *qry, const RowSet *set, StrBuf *ou
     res = find_proj(qry, cols, &ncol, err, cap);
     if (res != ERR_OK) {
         return res;
+    }
+    if (sum_only) {
+        res = sb_addf(out, "[%s]\n", sum_head(qry));
+        if (res != ERR_OK) {
+            return res;
+        }
+        res = sb_addf(out, "rows : %zu\n", set->len);
+        if (res != ERR_OK) {
+            return res;
+        }
+        res = sb_addf(out, "scan : %s\n", scan_name(set->scan));
+        if (res != ERR_OK) {
+            return res;
+        }
+        return sb_addf(out, "time : %.3f ms\n", set->ms);
     }
     for (i = 0; i < ncol; ++i) {
         w[i] = strlen(col_name(cols[i]));
@@ -288,7 +335,9 @@ static Err print_sel(const Db *db, const Qry *qry, const RowSet *set, StrBuf *ou
                    set->ms);
 }
 
-static Err run_sel(Db *db, const Qry *qry, StrBuf *out, char *err, size_t cap) {
+/* 요약: SELECT 쿼리를 실행하고 결과를 출력 버퍼에 담는다. */
+static Err run_sel(Db *db, const Qry *qry, int sum_only, StrBuf *out, char *err,
+                   size_t cap) {
     RowSet set;
     Err res;
 
@@ -300,11 +349,12 @@ static Err run_sel(Db *db, const Qry *qry, StrBuf *out, char *err, size_t cap) {
     if (res != ERR_OK) {
         return res;
     }
-    res = print_sel(db, qry, &set, out, err, cap);
+    res = print_sel(db, qry, &set, sum_only, out, err, cap);
     free_rows(&set);
     return res;
 }
 
+/* 요약: INSERT 쿼리를 실행하고 새 id를 출력 버퍼에 쓴다. */
 static Err run_ins(Db *db, const Qry *qry, StrBuf *out, char *err, size_t cap) {
     int new_id;
 
@@ -328,14 +378,18 @@ static Err run_ins(Db *db, const Qry *qry, StrBuf *out, char *err, size_t cap) {
     return sb_addf(out, "inserted id=%d, rows=1\n", new_id);
 }
 
-Err run_qry(Db *db, const Qry *qry, StrBuf *out, char *err, size_t cap) {
+/* 요약: 쿼리 종류에 따라 SELECT 또는 INSERT를 실행한다. */
+Err run_qry(Db *db, const Qry *qry, int sum_only, StrBuf *out, char *err,
+            size_t cap) {
     if (qry->kind == Q_SELECT) {
-        return run_sel(db, qry, out, err, cap);
+        return run_sel(db, qry, sum_only, out, err, cap);
     }
     return run_ins(db, qry, out, err, cap);
 }
 
-Err run_batch(Db *db, const char *sql, StrBuf *out, char *err, size_t cap) {
+/* 요약: 배치 하나를 트랜잭션처럼 실행하고 실패 시 롤백한다. */
+Err run_batch(Db *db, const char *sql, int sum_only, StrBuf *out, char *err,
+              size_t cap) {
     StmtList stmts;
     TokList toks;
     Qry qry;
@@ -378,7 +432,7 @@ Err run_batch(Db *db, const char *sql, StrBuf *out, char *err, size_t cap) {
         if (qry.kind == Q_INSERT) {
             dirty = 1;
         }
-        res = run_qry(db, &qry, &tmp, msg, sizeof(msg));
+        res = run_qry(db, &qry, sum_only, &tmp, msg, sizeof(msg));
         if (res != ERR_OK) {
             err_set(err, cap, "statement %d exec error: %s", stmts.list[i].no,
                     msg);
@@ -417,4 +471,3 @@ fail:
     sb_free(&tmp);
     return res;
 }
-

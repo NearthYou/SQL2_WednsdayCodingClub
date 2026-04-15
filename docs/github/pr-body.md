@@ -1,39 +1,40 @@
-# PR Title
-Implement a C-based library SQL demo with cache, rollback, and B+ tree id lookup
+# PR 제목
+캐시, 롤백, B+ 트리 id 조회를 포함한 C 기반 도서관 SQL 데모 구현
 
-## Summary
-- build a readable SQL demo engine in C for one `books` table
-- support `SELECT`, `INSERT`, multi-statement batches, and rollback
-- add binary query/data formats, tests, docs, performance tooling, and CI
+## 요약
+- `books` 테이블 하나를 위한 읽기 쉬운 C 기반 SQL 데모 엔진 구현
+- `SELECT`, `INSERT`, 다중 문장 배치, 롤백 지원
+- query/data 바이너리 포맷, 테스트, 문서, 성능 도구, CI 추가
 
-## Main Design Choices
-- reduced schema: `id`, `title`, `author`, `genre`
-- fixed-size binary row format for simpler file I/O
-- one B+ tree only for `id`
-- linear scan for other columns
-- rollback by restoring row count and `next_id`, then rebuilding the B+ tree
+## 주요 설계 결정
+- 축소 스키마 사용: `id`, `title`, `author`, `genre`
+- 파일 I/O 단순화를 위해 고정 길이 바이너리 레코드 사용
+- B+ 트리는 `id`에만 적용
+- 다른 컬럼은 선형 탐색 사용
+- 롤백은 행 수와 `next_id`를 복원한 뒤 B+ 트리를 재구성하는 방식 사용
 
-## Test Results
-- unit tests: pass
-- function tests: pass
-- manual smoke queries: pass
+## 테스트 결과
+- 단위 테스트: 통과
+- 기능 테스트: 통과
+- 수동 스모크 쿼리: 통과
 
-## Performance
-- dataset: `1,000,000` rows
+## 성능
+- 데이터셋: `1,000,000` rows
 - `WHERE id = 1000000`: `scan=B+Tree, time=0.001 ms`
 - `WHERE author = 'Author 999'`: `scan=Linear, time=115.251 ms`
 - `WHERE genre = 'Genre 7'`: `scan=Linear, time=69.288 ms`
 
-## Review Focus
-- batch split and parser clarity
-- rollback and save consistency
-- B+ tree scope limited to `id`
-- docs and tests matching real behavior
+## 리뷰 포인트
+- 배치 분리와 parser 흐름의 명확성
+- 롤백 및 저장 일관성
+- B+ 트리 적용 범위가 `id`로 제한되는 점
+- 문서와 테스트가 실제 동작과 맞는지
 
-## Suggested GitHub Commands
+## 권장 GitHub 명령
 ```bash
-gh issue create --title "Build the core SQL path for books" --body-file docs/github/issue-1.md
-gh issue create --title "Add binary storage, cache sync, rollback, and B+ tree index" --body-file docs/github/issue-2.md
-gh issue create --title "Finish tests, docs, perf tooling, and CI" --body-file docs/github/issue-3.md
-gh pr create --base main --head SS --title "Implement a C-based library SQL demo" --body-file docs/github/pr-body.md
+gh issue create --title "books용 핵심 SQL 실행 경로 구현" --body-file docs/github/issue-1.md
+gh issue create --title "바이너리 저장소, 캐시 동기화, 롤백, B+ 트리 인덱스 추가" --body-file docs/github/issue-2.md
+gh issue create --title "테스트, 문서, 성능 도구, CI 마무리" --body-file docs/github/issue-3.md
+gh pr create --base main --head SS --title "C 기반 도서관 SQL 데모 구현" --body-file docs/github/pr-body.md
 ```
+

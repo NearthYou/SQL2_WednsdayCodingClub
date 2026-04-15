@@ -1,55 +1,55 @@
-# Binary Formats
+# 바이너리 포맷
 
-## Query Binary Format: `QSQL`
-This format stores one full SQL batch.
+## Query 바이너리 포맷: `QSQL`
+이 포맷은 SQL 배치 하나 전체를 저장합니다.
 
-### Header
-- magic: 4 bytes, ASCII `QSQL`
-- version: `uint32`, current value `1`
-- sql_len: `uint32`, byte length of the SQL payload
+### 헤더
+- magic: 4바이트, ASCII `QSQL`
+- version: `uint32`, 현재 값 `1`
+- sql_len: `uint32`, SQL payload의 바이트 길이
 
-### Payload
-- raw SQL batch bytes
-- the payload is not split ahead of time
-- the final semicolon must still be present in the SQL text
+### 페이로드
+- 원본 SQL 배치 바이트
+- 미리 문장 단위로 분리하지 않은 상태로 저장
+- SQL 텍스트에는 마지막 세미콜론이 그대로 들어 있어야 함
 
-### Validation
-- magic must be `QSQL`
-- version must be `1`
-- `sql_len` must exactly match the remaining file size
+### 검증 규칙
+- magic은 반드시 `QSQL`이어야 함
+- version은 반드시 `1`이어야 함
+- `sql_len`은 파일에 남아 있는 실제 payload 길이와 정확히 일치해야 함
 
-## Data Binary Format: `BKDB`
-This format stores the persistent `books` table.
+## Data 바이너리 포맷: `BKDB`
+이 포맷은 영속 저장용 `books` 테이블을 저장합니다.
 
-### Header
-- magic: 4 bytes, ASCII `BKDB`
-- version: `uint32`, current value `1`
-- rec_sz: `uint16`, current value `196`
-- keep: `uint16`, reserved, currently `0`
-- cnt: `uint32`, row count
-- next_id: `uint32`, next auto-increment id
+### 헤더
+- magic: 4바이트, ASCII `BKDB`
+- version: `uint32`, 현재 값 `1`
+- rec_sz: `uint16`, 현재 값 `196`
+- keep: `uint16`, 예약 필드, 현재 값 `0`
+- cnt: `uint32`, 행 수
+- next_id: `uint32`, 다음 자동 증가 id
 
-### One Book Record
+### 책 레코드 하나의 구조
 - `id`: `uint32`
 - `title`: `char[96]`
 - `author`: `char[64]`
 - `genre`: `char[32]`
 
-Strings are fixed-size and zero-padded.
+문자열은 모두 고정 길이이며, 남는 영역은 `0`으로 채웁니다.
 
-## Cache And Save Policy
-- The program loads `data/books.bin` once at startup.
-- All queries run against the in-memory cache.
-- A batch is one transaction.
-- `SELECT` output is buffered until the whole batch succeeds.
-- `INSERT` changes stay only in memory until the whole batch succeeds.
-- If a statement fails, row count and `next_id` are restored and the B+ tree is rebuilt from the current cache state.
-- If save fails, the same rollback path runs.
-- Save writes to `*.tmp` first and swaps it into place only after a full successful write.
+## 캐시 및 저장 정책
+- 프로그램은 시작 시 `data/books.bin`을 한 번만 읽습니다.
+- 모든 쿼리는 메모리 캐시를 기준으로 실행합니다.
+- 배치 하나가 트랜잭션 하나입니다.
+- `SELECT` 결과는 배치 전체가 성공할 때까지 버퍼링합니다.
+- `INSERT` 결과도 배치 전체가 성공하기 전까지는 파일에 반영하지 않습니다.
+- 중간 문장 하나라도 실패하면 행 수와 `next_id`를 되돌리고, 현재 캐시 기준으로 B+ 트리를 다시 만듭니다.
+- 저장 단계에서 실패해도 같은 롤백 경로를 사용합니다.
+- 저장은 먼저 `*.tmp`에 모두 쓴 뒤, 전체 쓰기가 성공한 경우에만 정식 파일로 교체합니다.
 
-## Why Fixed Strings
-- simpler file I/O
-- simpler format checks
-- easier debugging with hex editors
-- easier beginner-friendly code
+## 고정 길이 문자열을 쓴 이유
+- 파일 I/O가 더 단순함
+- 포맷 검증이 더 쉬움
+- 헥스 에디터로 디버깅하기 쉬움
+- 초보자에게 코드 흐름을 설명하기 쉬움
 

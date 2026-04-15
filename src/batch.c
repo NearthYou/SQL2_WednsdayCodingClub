@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* 요약: 잘라낸 SQL 조각을 문장 목록에 추가한다. */
 static Err add_stmt(StmtList *out, const char *sql, size_t a, size_t b, int no) {
     char *txt;
     Stmt *next;
@@ -40,6 +41,7 @@ static Err add_stmt(StmtList *out, const char *sql, size_t a, size_t b, int no) 
     return ERR_OK;
 }
 
+/* 요약: 배치를 세미콜론 기준으로 문장 목록으로 나눈다. */
 Err split_sql(const char *sql, StmtList *out, char *err, size_t cap) {
     size_t i;
     size_t start;
@@ -101,6 +103,7 @@ Err split_sql(const char *sql, StmtList *out, char *err, size_t cap) {
     return ERR_OK;
 }
 
+/* 요약: 파일 내용을 끝까지 읽어 메모리 버퍼에 담는다. */
 static Err read_all(FILE *fp, unsigned char **buf, size_t *len, char *err,
                     size_t cap) {
     unsigned char tmp[4096];
@@ -134,6 +137,7 @@ static Err read_all(FILE *fp, unsigned char **buf, size_t *len, char *err,
     return ERR_OK;
 }
 
+/* 요약: 텍스트 SQL 파일이나 QSQL 파일에서 배치를 읽는다. */
 Err load_sql_file(const char *path, char **sql, char *err, size_t cap) {
     FILE *fp;
     unsigned char *raw;
@@ -203,6 +207,7 @@ Err load_sql_file(const char *path, char **sql, char *err, size_t cap) {
     return ERR_OK;
 }
 
+/* 요약: 기본 입력 경로를 순서대로 찾아 SQL을 읽는다. */
 Err load_default_sql(char **sql, char *err, size_t cap) {
     Err res;
 
@@ -213,6 +218,7 @@ Err load_default_sql(char **sql, char *err, size_t cap) {
     return load_sql_file("data/input.sql", sql, err, cap);
 }
 
+/* 요약: 배치 문자열을 QSQL 바이너리 파일로 저장한다. */
 Err save_qsql(const char *path, const char *sql, char *err, size_t cap) {
     FILE *fp;
     QHdr hdr;

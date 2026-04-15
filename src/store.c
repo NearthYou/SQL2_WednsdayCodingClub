@@ -5,10 +5,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* 요약: 데이터 파일 한 레코드의 고정 크기를 돌려준다. */
 static size_t rec_sz(void) {
     return sizeof(uint32_t) + TITLE_LEN + AUTH_LEN + GENRE_LEN;
 }
 
+/* 요약: 책 배열이 더 담을 수 있게 공간을 늘린다. */
 static Err grow_rows(Db *db) {
     Book *next;
 
@@ -24,11 +26,13 @@ static Err grow_rows(Db *db) {
     return ERR_OK;
 }
 
+/* 요약: 고정 길이 문자열 필드에 안전하게 값을 복사한다. */
 static void copy_fix(char *dst, size_t cap, const char *src) {
     memset(dst, 0, cap);
     snprintf(dst, cap, "%s", src);
 }
 
+/* 요약: 책 한 행을 바이너리 파일에 쓴다. */
 static Err write_row(FILE *fp, const Book *row) {
     uint32_t id;
 
@@ -42,6 +46,7 @@ static Err write_row(FILE *fp, const Book *row) {
     return ERR_OK;
 }
 
+/* 요약: 책 한 행을 바이너리 파일에서 읽는다. */
 static Err read_row(FILE *fp, Book *row) {
     uint32_t id;
 
@@ -58,6 +63,7 @@ static Err read_row(FILE *fp, Book *row) {
     return ERR_OK;
 }
 
+/* 요약: 임시 저장 파일을 실제 데이터 파일로 교체한다. */
 static Err swap_file(const char *path, const char *tmp, char *err, size_t cap) {
     char bak[PATH_LEN];
 
@@ -76,12 +82,14 @@ static Err swap_file(const char *path, const char *tmp, char *err, size_t cap) {
     return ERR_OK;
 }
 
+/* 요약: 빈 데이터베이스 구조체를 초기 상태로 만든다. */
 void db_init(Db *db) {
     memset(db, 0, sizeof(*db));
     db->next_id = 1;
     bp_init(&db->idx);
 }
 
+/* 요약: 데이터베이스가 쓰는 메모리와 인덱스를 정리한다. */
 void db_free(Db *db) {
     free(db->rows);
     db->rows = NULL;
@@ -90,6 +98,7 @@ void db_free(Db *db) {
     bp_free(&db->idx);
 }
 
+/* 요약: 데이터 파일 경로를 구조체에 저장한다. */
 Err db_set_path(Db *db, const char *path, char *err, size_t cap) {
     if (strlen(path) >= sizeof(db->path)) {
         err_set(err, cap, "data path is too long");
@@ -99,6 +108,7 @@ Err db_set_path(Db *db, const char *path, char *err, size_t cap) {
     return ERR_OK;
 }
 
+/* 요약: 현재 행 배열 기준으로 id 인덱스를 다시 만든다. */
 Err db_reidx(Db *db, char *err, size_t cap) {
     size_t i;
     Err res;
@@ -115,6 +125,7 @@ Err db_reidx(Db *db, char *err, size_t cap) {
     return ERR_OK;
 }
 
+/* 요약: 책 한 권을 캐시와 B+ 트리에 함께 추가한다. */
 Err db_add(Db *db, const char *title, const char *author, const char *genre,
            int *new_id, char *err, size_t cap) {
     Err res;
@@ -153,6 +164,7 @@ Err db_add(Db *db, const char *title, const char *author, const char *genre,
     return ERR_OK;
 }
 
+/* 요약: 발표용 기본 책 데이터를 메모리에 채운다. */
 Err db_seed(Db *db, char *err, size_t cap) {
     static const struct {
         const char *title;
@@ -190,6 +202,7 @@ Err db_seed(Db *db, char *err, size_t cap) {
     return ERR_OK;
 }
 
+/* 요약: 현재 캐시 전체를 BKDB 파일로 안전하게 저장한다. */
 Err db_save(Db *db, char *err, size_t cap) {
     FILE *fp;
     DHdr hdr;
@@ -234,6 +247,7 @@ Err db_save(Db *db, char *err, size_t cap) {
     return swap_file(db->path, tmp, err, cap);
 }
 
+/* 요약: BKDB 파일을 읽어 캐시와 인덱스를 준비한다. */
 Err db_load(Db *db, char *err, size_t cap) {
     FILE *fp;
     DHdr hdr;

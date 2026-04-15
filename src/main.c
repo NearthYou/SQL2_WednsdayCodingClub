@@ -5,10 +5,12 @@
 #include <string.h>
 
 #ifndef NO_MAIN
+/* 요약: 기본 경로 규칙으로 SQL 파일을 읽는다. */
 static Err load_default(char **sql, char *err, size_t cap) {
     return load_default_sql(sql, err, cap);
 }
 
+/* 요약: CLI 모드에서 큰따옴표로 감싼 배치를 입력받는다. */
 static Err ask_cli(char **sql, char *err, size_t cap) {
     char *line;
     size_t len;
@@ -36,6 +38,7 @@ static Err ask_cli(char **sql, char *err, size_t cap) {
     return ERR_OK;
 }
 
+/* 요약: 파일 모드에서 경로를 입력받고 SQL 파일을 읽는다. */
 static Err ask_file(char **sql, char *err, size_t cap) {
     char *line;
     Err res;
@@ -56,6 +59,7 @@ static Err ask_file(char **sql, char *err, size_t cap) {
     return res;
 }
 
+/* 요약: 대화형 실행에서 입력 모드를 고른다. */
 static Err pick_mode(Opts *opt, char *err, size_t cap) {
     char *line;
 
@@ -81,6 +85,7 @@ static Err pick_mode(Opts *opt, char *err, size_t cap) {
     return ERR_OK;
 }
 
+/* 요약: 옵션과 모드에 맞는 SQL 배치를 준비한다. */
 static Err get_sql(const Opts *opt, char **sql, char *err, size_t cap) {
     if (opt->mode == SRC_CLI) {
         if (opt->batch[0] != '\0') {
@@ -99,6 +104,7 @@ static Err get_sql(const Opts *opt, char **sql, char *err, size_t cap) {
     return ask_file(sql, err, cap);
 }
 
+/* 요약: 프로그램 전체 흐름을 묶어 한 배치를 실행한다. */
 int main(int argc, char **argv) {
     Opts opt;
     Db db;
@@ -147,7 +153,7 @@ int main(int argc, char **argv) {
     }
 
     sb_init(&out);
-    res = run_batch(&db, sql, &out, err, sizeof(err));
+    res = run_batch(&db, sql, opt.sum_only, &out, err, sizeof(err));
     free(sql);
     if (res != ERR_OK) {
         fprintf(stderr, "[ERR] %s\n", err);

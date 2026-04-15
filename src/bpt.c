@@ -10,6 +10,7 @@ typedef struct {
     BpNode *right;
 } Split;
 
+/* 요약: 새 B+ 트리 노드를 0으로 초기화해 만든다. */
 static BpNode *node_new(int leaf) {
     BpNode *node;
 
@@ -21,6 +22,7 @@ static BpNode *node_new(int leaf) {
     return node;
 }
 
+/* 요약: 하위 노드까지 재귀로 모두 해제한다. */
 static void node_free(BpNode *node) {
     int i;
 
@@ -35,6 +37,7 @@ static void node_free(BpNode *node) {
     free(node);
 }
 
+/* 요약: 현재 노드에서 키가 들어갈 자리를 찾는다. */
 static int find_pos(BpNode *node, int key) {
     int at;
 
@@ -45,6 +48,7 @@ static int find_pos(BpNode *node, int key) {
     return at;
 }
 
+/* 요약: 재귀로 키를 넣고 분할 결과를 부모에게 돌려준다. */
 static Split put_rec(BpNode *node, int key, int val, Err *err) {
     Split sp;
     int at;
@@ -175,15 +179,18 @@ static Split put_rec(BpNode *node, int key, int val, Err *err) {
     }
 }
 
+/* 요약: 비어 있는 B+ 트리를 준비한다. */
 void bp_init(BpTree *tree) {
     tree->root = NULL;
 }
 
+/* 요약: 트리 전체 메모리를 해제한다. */
 void bp_free(BpTree *tree) {
     node_free(tree->root);
     tree->root = NULL;
 }
 
+/* 요약: id 키와 행 위치를 트리에 넣는다. */
 Err bp_put(BpTree *tree, int key, int val) {
     Split sp;
     Err err;
@@ -221,6 +228,7 @@ Err bp_put(BpTree *tree, int key, int val) {
     return ERR_OK;
 }
 
+/* 요약: id 키로 행 위치를 찾아 돌려준다. */
 int bp_get(const BpTree *tree, int key, int *val) {
     BpNode *node;
     int at;
@@ -244,4 +252,3 @@ int bp_get(const BpTree *tree, int key, int *val) {
     }
     return 0;
 }
-

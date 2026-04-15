@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 
+/* 요약: 성능 비교용 대량 책 데이터를 만들어 저장한다. */
 Err gen_perf(const char *path, int cnt, char *err, size_t cap) {
     Db db;
     int i;
@@ -34,6 +35,7 @@ Err gen_perf(const char *path, int cnt, char *err, size_t cap) {
 }
 
 #ifdef PERF_MAIN
+/* 요약: 대량 데이터 생성기를 독립 실행형으로 돌린다. */
 int main(int argc, char **argv) {
     char err[256];
     int cnt;

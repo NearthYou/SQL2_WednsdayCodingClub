@@ -14,6 +14,7 @@
 #include <time.h>
 #endif
 
+/* 요약: 문자열 버퍼가 더 담을 공간을 미리 늘린다. */
 static Err sb_grow(StrBuf *sb, size_t add) {
     size_t need;
     char *next;
@@ -36,6 +37,7 @@ static Err sb_grow(StrBuf *sb, size_t add) {
     return ERR_OK;
 }
 
+/* 요약: 현재 시간을 밀리초 단위로 읽는다. */
 double now_ms(void) {
 #ifdef _WIN32
     LARGE_INTEGER freq;
@@ -52,12 +54,14 @@ double now_ms(void) {
 #endif
 }
 
+/* 요약: 비어 있는 문자열 버퍼를 준비한다. */
 void sb_init(StrBuf *sb) {
     sb->buf = NULL;
     sb->len = 0;
     sb->cap = 0;
 }
 
+/* 요약: 문자열 버퍼 메모리를 정리한다. */
 void sb_free(StrBuf *sb) {
     free(sb->buf);
     sb->buf = NULL;
@@ -65,6 +69,7 @@ void sb_free(StrBuf *sb) {
     sb->cap = 0;
 }
 
+/* 요약: 길이를 아는 문자열 조각을 버퍼 뒤에 붙인다. */
 Err sb_addn(StrBuf *sb, const char *txt, size_t len) {
     Err err;
 
@@ -78,10 +83,12 @@ Err sb_addn(StrBuf *sb, const char *txt, size_t len) {
     return ERR_OK;
 }
 
+/* 요약: C 문자열 전체를 버퍼 뒤에 붙인다. */
 Err sb_add(StrBuf *sb, const char *txt) {
     return sb_addn(sb, txt, strlen(txt));
 }
 
+/* 요약: 서식 문자열 결과를 버퍼 뒤에 붙인다. */
 Err sb_addf(StrBuf *sb, const char *fmt, ...) {
     va_list ap;
     va_list cp;
@@ -107,6 +114,7 @@ Err sb_addf(StrBuf *sb, const char *fmt, ...) {
     return ERR_OK;
 }
 
+/* 요약: 에러 버퍼에 사람이 읽을 메시지를 쓴다. */
 void err_set(char *buf, size_t cap, const char *fmt, ...) {
     va_list ap;
 
@@ -118,6 +126,7 @@ void err_set(char *buf, size_t cap, const char *fmt, ...) {
     va_end(ap);
 }
 
+/* 요약: 두 문자열을 대소문자 없이 비교한다. */
 int str_ieq(const char *a, const char *b) {
     unsigned char ca;
     unsigned char cb;
@@ -134,6 +143,7 @@ int str_ieq(const char *a, const char *b) {
     return *a == '\0' && *b == '\0';
 }
 
+/* 요약: 문자열 앞뒤 공백을 제자리에서 지운다. */
 void trim_in(char *txt) {
     size_t len;
     size_t a;
@@ -154,6 +164,7 @@ void trim_in(char *txt) {
     txt[b - a] = '\0';
 }
 
+/* 요약: C 문자열 하나를 새 메모리로 복사한다. */
 char *dup_txt(const char *txt) {
     size_t len;
     char *out;
@@ -167,6 +178,7 @@ char *dup_txt(const char *txt) {
     return out;
 }
 
+/* 요약: 문자열의 일부 구간을 새 메모리로 복사한다. */
 char *dup_rng(const char *txt, size_t len) {
     char *out;
 
@@ -179,6 +191,7 @@ char *dup_rng(const char *txt, size_t len) {
     return out;
 }
 
+/* 요약: 줄바꿈 전까지 한 줄 입력을 읽는다. */
 char *read_line(FILE *fp) {
     int ch;
     StrBuf sb;
@@ -208,6 +221,7 @@ char *read_line(FILE *fp) {
     return sb.buf;
 }
 
+/* 요약: 문장 목록이 잡고 있는 메모리를 모두 정리한다. */
 void free_stmts(StmtList *lst) {
     size_t i;
 
@@ -223,6 +237,7 @@ void free_stmts(StmtList *lst) {
     lst->cap = 0;
 }
 
+/* 요약: 토큰 목록 메모리를 정리한다. */
 void free_toks(TokList *lst) {
     free(lst->list);
     lst->list = NULL;
@@ -230,6 +245,7 @@ void free_toks(TokList *lst) {
     lst->cap = 0;
 }
 
+/* 요약: 조회 결과 집합 메모리를 정리한다. */
 void free_rows(RowSet *set) {
     free(set->list);
     set->list = NULL;
@@ -237,6 +253,7 @@ void free_rows(RowSet *set) {
     set->cap = 0;
 }
 
+/* 요약: 옵션 뒤에 값이 꼭 있는지 검사한다. */
 static int arg_need(int i, int argc, char *err, size_t cap, const char *name) {
     if (i + 1 >= argc) {
         err_set(err, cap, "missing value after %s", name);
@@ -245,6 +262,7 @@ static int arg_need(int i, int argc, char *err, size_t cap, const char *name) {
     return 1;
 }
 
+/* 요약: 길이 제한 안에서 문자열을 안전하게 복사한다. */
 static void copy_str(char *dst, size_t cap, const char *src) {
     if (cap == 0) {
         return;
@@ -252,6 +270,7 @@ static void copy_str(char *dst, size_t cap, const char *src) {
     snprintf(dst, cap, "%s", src);
 }
 
+/* 요약: 명령줄 인자를 읽어 실행 옵션 구조체를 채운다. */
 Err parse_args(int argc, char **argv, Opts *opt, char *err, size_t cap) {
     int i;
 
@@ -260,6 +279,8 @@ Err parse_args(int argc, char **argv, Opts *opt, char *err, size_t cap) {
     for (i = 1; i < argc; ++i) {
         if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
             opt->help = 1;
+        } else if (strcmp(argv[i], "--summary-only") == 0) {
+            opt->sum_only = 1;
         } else if (strcmp(argv[i], "--mode") == 0) {
             if (!arg_need(i, argc, err, cap, "--mode")) {
                 return ERR_ARG;
@@ -299,11 +320,13 @@ Err parse_args(int argc, char **argv, Opts *opt, char *err, size_t cap) {
     return ERR_OK;
 }
 
+/* 요약: 실행 가능한 옵션 목록을 화면에 보여준다. */
 void print_help(void) {
     puts("sql2_books");
     puts("  --mode cli|file");
     puts("  --batch \"SELECT * FROM books;\"");
     puts("  --file data/input.sql");
     puts("  --data data/books.bin");
+    puts("  --summary-only");
     puts("  --help");
 }

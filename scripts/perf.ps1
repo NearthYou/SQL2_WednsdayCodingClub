@@ -9,12 +9,16 @@ $genTime = Measure-Command {
   & "build/gen_perf.exe" "data/perf_books.bin" $Count | Out-Null
 }
 
-$idLine = (& "build/sql2_books.exe" --mode cli --data "data/perf_books.bin" --batch "SELECT * FROM books WHERE id = $Count;") | Select-String "scan=" | ForEach-Object { $_.Line }
-$authLine = (& "build/sql2_books.exe" --mode cli --data "data/perf_books.bin" --batch "SELECT * FROM books WHERE author = 'Author 999';") | Select-String "scan=" | ForEach-Object { $_.Line }
-$genreLine = (& "build/sql2_books.exe" --mode cli --data "data/perf_books.bin" --batch "SELECT * FROM books WHERE genre = 'Genre 7';") | Select-String "scan=" | ForEach-Object { $_.Line }
+$idOut = & "build/sql2_books.exe" --mode cli --data "data/perf_books.bin" --summary-only --batch "SELECT * FROM books WHERE id = $Count;"
+$authOut = & "build/sql2_books.exe" --mode cli --data "data/perf_books.bin" --summary-only --batch "SELECT * FROM books WHERE author = 'Author 999';"
+$genreOut = & "build/sql2_books.exe" --mode cli --data "data/perf_books.bin" --summary-only --batch "SELECT * FROM books WHERE genre = 'Genre 7';"
 
-Write-Host ("generate_time={0:N3} sec" -f $genTime.TotalSeconds)
-Write-Host $idLine
-Write-Host $authLine
-Write-Host $genreLine
-
+Write-Host "[dataset build]"
+Write-Host ("count : {0:N0}" -f $Count)
+Write-Host ("time  : {0:N3} sec" -f $genTime.TotalSeconds)
+Write-Host ""
+Write-Host ($idOut -join "`n")
+Write-Host ""
+Write-Host ($authOut -join "`n")
+Write-Host ""
+Write-Host ($genreOut -join "`n")

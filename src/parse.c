@@ -8,10 +8,12 @@ typedef struct {
     size_t at;
 } Psr;
 
+/* 요약: 현재 보고 있는 토큰을 돌려준다. */
 static const Tok *cur(Psr *ps) {
     return &ps->toks->list[ps->at];
 }
 
+/* 요약: 현재 토큰을 소비하고 다음 위치로 넘긴다. */
 static const Tok *take(Psr *ps) {
     const Tok *tok;
 
@@ -22,6 +24,7 @@ static const Tok *take(Psr *ps) {
     return tok;
 }
 
+/* 요약: 현재 토큰이 기대한 종류인지 검사한다. */
 static int tok_is(Psr *ps, TokKind kind, Kw kw) {
     const Tok *tok;
 
@@ -35,6 +38,7 @@ static int tok_is(Psr *ps, TokKind kind, Kw kw) {
     return 1;
 }
 
+/* 요약: 꼭 필요한 토큰을 확인하고 소비한다. */
 static Err need(Psr *ps, TokKind kind, Kw kw, char *err, size_t cap,
                 const char *what) {
     if (!tok_is(ps, kind, kw)) {
@@ -45,6 +49,7 @@ static Err need(Psr *ps, TokKind kind, Kw kw, char *err, size_t cap,
     return ERR_OK;
 }
 
+/* 요약: 식별자 토큰을 읽어 목적 버퍼에 복사한다. */
 static Err parse_word(Psr *ps, char *dst, size_t cap, char *err, size_t ecap,
                       const char *what) {
     const Tok *tok;
@@ -58,6 +63,7 @@ static Err parse_word(Psr *ps, char *dst, size_t cap, char *err, size_t ecap,
     return ERR_OK;
 }
 
+/* 요약: 정수 또는 문자열 값을 하나 파싱한다. */
 static Err parse_val(Psr *ps, Val *val, char *err, size_t cap) {
     const Tok *tok;
 
@@ -80,6 +86,7 @@ static Err parse_val(Psr *ps, Val *val, char *err, size_t cap) {
     return ERR_PARSE;
 }
 
+/* 요약: SELECT의 컬럼 목록이나 별표를 파싱한다. */
 static Err parse_cols(Psr *ps, ColList *cols, char *err, size_t cap) {
     Err res;
 
@@ -108,6 +115,7 @@ static Err parse_cols(Psr *ps, ColList *cols, char *err, size_t cap) {
     return ERR_OK;
 }
 
+/* 요약: 선택적인 WHERE 절을 파싱한다. */
 static Err parse_cond(Psr *ps, Cond *cond, char *err, size_t cap) {
     Err res;
 
@@ -128,6 +136,7 @@ static Err parse_cond(Psr *ps, Cond *cond, char *err, size_t cap) {
     return parse_val(ps, &cond->val, err, cap);
 }
 
+/* 요약: SELECT 문 전체를 Qry 구조체로 만든다. */
 static Err parse_sel(Psr *ps, Qry *qry, char *err, size_t cap) {
     Err res;
 
@@ -162,6 +171,7 @@ static Err parse_sel(Psr *ps, Qry *qry, char *err, size_t cap) {
     return ERR_OK;
 }
 
+/* 요약: INSERT 문 전체를 Qry 구조체로 만든다. */
 static Err parse_ins(Psr *ps, Qry *qry, char *err, size_t cap) {
     Err res;
 
@@ -215,6 +225,7 @@ static Err parse_ins(Psr *ps, Qry *qry, char *err, size_t cap) {
     return ERR_OK;
 }
 
+/* 요약: 토큰 목록을 한 개의 쿼리 구조체로 바꾼다. */
 Err parse_stmt(const TokList *toks, Qry *qry, char *err, size_t cap) {
     Psr ps;
 

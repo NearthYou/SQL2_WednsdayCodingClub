@@ -26,6 +26,7 @@ static int fail = 0;
         }                                                                      \
     } while (0)
 
+/* 요약: 테스트 중간에 생긴 임시 파일들을 지운다. */
 static void clean_file(const char *path) {
     char tmp[PATH_LEN];
     char bak[PATH_LEN];
@@ -37,6 +38,7 @@ static void clean_file(const char *path) {
     remove(bak);
 }
 
+/* 요약: 문자열 안 세미콜론을 포함한 정상 분리를 검사한다. */
 static int t_split_ok(void) {
     StmtList lst;
     char err[256];
@@ -53,6 +55,7 @@ static int t_split_ok(void) {
     return 1;
 }
 
+/* 요약: 비어 있는 문장이 오류로 잡히는지 검사한다. */
 static int t_split_empty_stmt(void) {
     StmtList lst;
     char err[256];
@@ -63,6 +66,7 @@ static int t_split_empty_stmt(void) {
     return 1;
 }
 
+/* 요약: SELECT 문이 올바른 쿼리 구조로 파싱되는지 본다. */
 static int t_lex_parse_select(void) {
     TokList toks;
     Qry qry;
@@ -85,6 +89,7 @@ static int t_lex_parse_select(void) {
     return 1;
 }
 
+/* 요약: INSERT 문이 올바른 값 목록으로 파싱되는지 본다. */
 static int t_lex_parse_insert(void) {
     TokList toks;
     Qry qry;
@@ -104,6 +109,7 @@ static int t_lex_parse_insert(void) {
     return 1;
 }
 
+/* 요약: B+ 트리 삽입과 단건 검색이 맞는지 확인한다. */
 static int t_bp_tree(void) {
     BpTree tree;
     int i;
@@ -122,6 +128,7 @@ static int t_bp_tree(void) {
     return 1;
 }
 
+/* 요약: QSQL 저장과 다시 읽기가 같은지 확인한다. */
 static int t_qsql_roundtrip(void) {
     char err[256];
     char *sql;
@@ -139,6 +146,7 @@ static int t_qsql_roundtrip(void) {
     return 1;
 }
 
+/* 요약: 데이터 저장 후 다시 로드해도 값이 유지되는지 본다. */
 static int t_db_save_load(void) {
     Db a;
     Db b;
@@ -166,6 +174,7 @@ static int t_db_save_load(void) {
     return 1;
 }
 
+/* 요약: 손상된 데이터 헤더를 안전하게 막는지 본다. */
 static int t_bad_data_hdr(void) {
     Db db;
     FILE *fp;
@@ -186,6 +195,7 @@ static int t_bad_data_hdr(void) {
     return 1;
 }
 
+/* 요약: 실패한 배치가 길이와 데이터 상태를 되돌리는지 본다. */
 static int t_rollback(void) {
     Db db;
     StrBuf out;
@@ -203,10 +213,10 @@ static int t_rollback(void) {
     CHECK(run_batch(&db,
                     "INSERT INTO books VALUES ('RB','Who','Tmp'); SELECT * FROM "
                     "nope;",
-                    &out, err, sizeof(err)) == ERR_EXEC);
+                    0, &out, err, sizeof(err)) == ERR_EXEC);
     CHECK(db.len == len);
-    CHECK(run_batch(&db, "SELECT * FROM books WHERE author = 'Who';", &out, err,
-                    sizeof(err)) == ERR_OK);
+    CHECK(run_batch(&db, "SELECT * FROM books WHERE author = 'Who';", 0, &out,
+                    err, sizeof(err)) == ERR_OK);
     CHECK(strstr(out.buf, "(no rows)") != NULL);
 
     sb_free(&out);
@@ -215,6 +225,7 @@ static int t_rollback(void) {
     return 1;
 }
 
+/* 요약: 단위 테스트 묶음을 차례로 실행한다. */
 int main(void) {
     RUN(t_split_ok);
     RUN(t_split_empty_stmt);
