@@ -45,8 +45,10 @@ san: build
 
 perf: $(APP) $(GEN)
 	./$(GEN) data/perf_books.bin 1000000
-	./$(APP) --mode cli --data data/perf_books.bin --batch "SELECT * FROM books WHERE id = 1000000;" | grep "scan="
-	./$(APP) --mode cli --data data/perf_books.bin --batch "SELECT * FROM books WHERE author = 'Author 999';" | grep "scan="
+	./$(APP) --mode cli --data data/perf_books.bin --summary-only --batch "SELECT * FROM books WHERE id = 1000000;"
+	./$(APP) --mode cli --data data/perf_books.bin --summary-only --batch "SELECT * FROM books WHERE id BETWEEN 999001 AND 1000000;"
+	./$(APP) --mode cli --data data/perf_books.bin --summary-only --batch "SELECT * FROM books WHERE author = 'Author 999';"
+	./$(APP) --mode cli --data data/perf_books.bin --summary-only --batch "SELECT * FROM books WHERE genre = 'Genre 7';"
 
 clean:
 	rm -rf build

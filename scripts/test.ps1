@@ -10,7 +10,7 @@ $smoke = & "build/sql2_books.exe" --mode cli --batch "SELECT * FROM books WHERE 
 Write-Host $smoke
 
 $default = "SELECT * FROM books WHERE id = 2;"
-Set-Content -Path "data/input.sql" -Value $default -NoNewline
+Set-Content -Path "data/input.sql" -Value $default -NoNewline -Encoding ascii
 $fileOut = & "build/sql2_books.exe" --mode file --file "data/input.sql"
 Remove-Item -LiteralPath "data/input.sql" -ErrorAction SilentlyContinue
 Write-Host $fileOut

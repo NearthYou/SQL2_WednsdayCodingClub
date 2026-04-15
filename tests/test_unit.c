@@ -38,6 +38,15 @@ static void clean_file(const char *path) {
     remove(bak);
 }
 
+typedef struct {
+    char data[4];
+    uint32_t ver;
+    uint16_t rec_sz;
+    uint16_t keep;
+    uint32_t cnt;
+    uint32_t next_id;
+} RawDHdr;
+
 /* 요약: 문자열 안 세미콜론을 포함한 정상 분리를 검사한다. */
 static int t_split_ok(void) {
     StmtList lst;
@@ -260,6 +269,35 @@ static int t_bad_data_hdr(void) {
     return 1;
 }
 
+/* 요약: 헤더의 cnt가 실제 파일 크기와 안 맞으면 로딩 전에 막는다. */
+static int t_bad_data_count(void) {
+    Db db;
+    FILE *fp;
+    char err[256];
+    RawDHdr hdr;
+    const char *path = "data/test_bad_count.bin";
+
+    clean_file(path);
+    fp = fopen(path, "wb");
+    CHECK(fp != NULL);
+    memcpy(hdr.data, "BKDB", 4);
+    hdr.ver = 1;
+    hdr.rec_sz = (uint16_t)(sizeof(uint32_t) + TITLE_LEN + AUTH_LEN + GENRE_LEN);
+    hdr.keep = 0;
+    hdr.cnt = 1000;
+    hdr.next_id = 1;
+    CHECK(fwrite(&hdr, sizeof(hdr), 1, fp) == 1);
+    fclose(fp);
+
+    db_init(&db);
+    CHECK(db_set_path(&db, path, err, sizeof(err)) == ERR_OK);
+    CHECK(db_load(&db, err, sizeof(err)) == ERR_FMT);
+    CHECK(strstr(err, "size does not match header") != NULL);
+    db_free(&db);
+    clean_file(path);
+    return 1;
+}
+
 /* 요약: 실패한 배치가 길이와 데이터 상태를 되돌리는지 본다. */
 static int t_rollback(void) {
     Db db;
@@ -302,6 +340,7 @@ int main(void) {
     RUN(t_qsql_roundtrip);
     RUN(t_db_save_load);
     RUN(t_bad_data_hdr);
+    RUN(t_bad_data_count);
     RUN(t_rollback);
     printf("unit: pass=%d fail=%d\n", pass, fail);
     return fail == 0 ? 0 : 1;

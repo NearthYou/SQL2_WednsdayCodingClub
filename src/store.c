@@ -21,6 +21,42 @@ static size_t rec_sz(void) {
     return sizeof(uint32_t) + TITLE_LEN + AUTH_LEN + GENRE_LEN;
 }
 
+/* 요약: 현재 열린 데이터 파일의 총 크기를 구한다. */
+static Err file_size(FILE *fp, long *size, char *err, size_t cap) {
+    if (fseek(fp, 0, SEEK_END) != 0) {
+        err_set(err, cap, "failed to seek data file");
+        return ERR_IO;
+    }
+    *size = ftell(fp);
+    if (*size < 0) {
+        err_set(err, cap, "failed to read data file size");
+        return ERR_IO;
+    }
+    return ERR_OK;
+}
+
+/* 요약: 헤더의 행 수와 레코드 크기가 실제 파일 크기와 맞는지 본다. */
+static Err check_data_size(FILE *fp, const DHdr *hdr, char *err, size_t cap) {
+    long got;
+    uint64_t need;
+    Err res;
+
+    res = file_size(fp, &got, err, cap);
+    if (res != ERR_OK) {
+        return res;
+    }
+    need = (uint64_t)sizeof(*hdr) + (uint64_t)hdr->cnt * (uint64_t)hdr->rec_sz;
+    if ((uint64_t)got != need) {
+        err_set(err, cap, "data file size does not match header");
+        return ERR_FMT;
+    }
+    if (fseek(fp, (long)sizeof(*hdr), SEEK_SET) != 0) {
+        err_set(err, cap, "failed to seek data file");
+        return ERR_IO;
+    }
+    return ERR_OK;
+}
+
 /* 요약: 책 배열이 더 담을 수 있게 공간을 늘린다. */
 static Err grow_rows(Db *db) {
     Book *next;
@@ -300,6 +336,11 @@ Err db_load(Db *db, char *err, size_t cap) {
         fclose(fp);
         err_set(err, cap, "bad data record size");
         return ERR_FMT;
+    }
+    res = check_data_size(fp, &hdr, err, cap);
+    if (res != ERR_OK) {
+        fclose(fp);
+        return res;
     }
 
     db->len = 0;

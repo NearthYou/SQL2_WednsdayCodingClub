@@ -403,6 +403,7 @@ static Err run_sel(Db *db, const Qry *qry, int sum_only, StrBuf *out, char *err,
 /* 요약: INSERT 쿼리를 실행하고 새 id를 출력 버퍼에 쓴다. */
 static Err run_ins(Db *db, const Qry *qry, StrBuf *out, char *err, size_t cap) {
     int new_id;
+    Err res;
 
     if (!str_ieq(qry->table, "books")) {
         err_set(err, cap, "unknown table: %s", qry->table);
@@ -417,9 +418,10 @@ static Err run_ins(Db *db, const Qry *qry, StrBuf *out, char *err, size_t cap) {
         err_set(err, cap, "books INSERT values must be strings");
         return ERR_EXEC;
     }
-    if (db_add(db, qry->vals[0].str, qry->vals[1].str, qry->vals[2].str, &new_id,
-               err, cap) != ERR_OK) {
-        return ERR_EXEC;
+    res = db_add(db, qry->vals[0].str, qry->vals[1].str, qry->vals[2].str,
+                 &new_id, err, cap);
+    if (res != ERR_OK) {
+        return res;
     }
     return sb_addf(out, "inserted id=%d, rows=1\n", new_id);
 }
@@ -512,7 +514,15 @@ Err run_batch(Db *db, const char *sql, int sum_only, StrBuf *out, char *err,
 fail:
     db->len = old_len;
     db->next_id = old_id;
-    db_reidx(db, msg, sizeof(msg));
+    {
+        Err roll_res;
+
+        roll_res = db_reidx(db, msg, sizeof(msg));
+        if (roll_res != ERR_OK) {
+            err_set(err, cap, "rollback failed while rebuilding index: %s", msg);
+            res = roll_res;
+        }
+    }
     free_stmts(&stmts);
     sb_free(&tmp);
     return res;
