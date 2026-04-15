@@ -1,9 +1,7 @@
 # 저장소 스킬
 
-현재 이 저장소에는 별도의 사용자 정의 Codex 스킬이 아직 없습니다.
+이 저장소에는 Codex가 재사용할 수 있는 로컬 스킬을 `skills/` 아래에 둡니다.
 
-반복되는 로컬 작업은 아래 스크립트로 자동화합니다.
-- `scripts/build.ps1`
-- `scripts/test.ps1`
-- `scripts/demo.ps1`
-- `scripts/perf.ps1`
+## 현재 스킬
+- `gh-review-merge`
+  - PR 코멘트를 읽고 합당한 피드백을 수정한 뒤 테스트, 답글, 푸시, 병합까지 마무리하는 흐름을 정리한 스킬
