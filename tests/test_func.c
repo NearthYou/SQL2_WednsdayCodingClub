@@ -1,0 +1,212 @@
+/* This file runs higher-level functional tests against batch execution. */
+#include "sql2.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+static int pass = 0;
+static int fail = 0;
+
+#define CHECK(x)                                                               \
+    do {                                                                       \
+        if (!(x)) {                                                            \
+            fprintf(stderr, "FAIL %s:%d: %s\n", __FILE__, __LINE__, #x);       \
+            return 0;                                                          \
+        }                                                                      \
+    } while (0)
+
+#define RUN(fn)                                                                \
+    do {                                                                       \
+        if (fn()) {                                                            \
+            ++pass;                                                            \
+            printf("ok - %s\n", #fn);                                          \
+        } else {                                                               \
+            ++fail;                                                            \
+        }                                                                      \
+    } while (0)
+
+static void clean_file(const char *path) {
+    char tmp[PATH_LEN];
+    char bak[PATH_LEN];
+
+    remove(path);
+    snprintf(tmp, sizeof(tmp), "%s.tmp", path);
+    snprintf(bak, sizeof(bak), "%s.bak", path);
+    remove(tmp);
+    remove(bak);
+}
+
+static int prep_db(Db *db, const char *path) {
+    char err[256];
+
+    clean_file(path);
+    db_init(db);
+    CHECK(db_set_path(db, path, err, sizeof(err)) == ERR_OK);
+    CHECK(db_load(db, err, sizeof(err)) == ERR_OK);
+    return 1;
+}
+
+static int t_select_id(void) {
+    Db db;
+    StrBuf out;
+    char err[256];
+
+    CHECK(prep_db(&db, "data/test_func_1.bin"));
+    sb_init(&out);
+    CHECK(run_batch(&db, "SELECT * FROM books WHERE id = 1;", &out, err,
+                    sizeof(err)) == ERR_OK);
+    CHECK(strstr(out.buf, "Clean Code") != NULL);
+    CHECK(strstr(out.buf, "scan=B+Tree") != NULL);
+    sb_free(&out);
+    db_free(&db);
+    clean_file("data/test_func_1.bin");
+    return 1;
+}
+
+static int t_insert_and_select(void) {
+    Db db;
+    StrBuf out;
+    char err[256];
+
+    CHECK(prep_db(&db, "data/test_func_2.bin"));
+    sb_init(&out);
+    CHECK(run_batch(&db,
+                    "INSERT INTO books VALUES ('Book X','Author X','Genre X'); "
+                    "SELECT * FROM books WHERE author = 'Author X';",
+                    &out, err, sizeof(err)) == ERR_OK);
+    CHECK(strstr(out.buf, "inserted id=") != NULL);
+    CHECK(strstr(out.buf, "Book X") != NULL);
+    sb_free(&out);
+    db_free(&db);
+    clean_file("data/test_func_2.bin");
+    return 1;
+}
+
+static int t_bad_table(void) {
+    Db db;
+    StrBuf out;
+    char err[256];
+
+    CHECK(prep_db(&db, "data/test_func_3.bin"));
+    sb_init(&out);
+    CHECK(run_batch(&db, "SELECT * FROM nope;", &out, err, sizeof(err)) ==
+          ERR_EXEC);
+    CHECK(strstr(err, "unknown table") != NULL);
+    sb_free(&out);
+    db_free(&db);
+    clean_file("data/test_func_3.bin");
+    return 1;
+}
+
+static int t_bad_col(void) {
+    Db db;
+    StrBuf out;
+    char err[256];
+
+    CHECK(prep_db(&db, "data/test_func_4.bin"));
+    sb_init(&out);
+    CHECK(run_batch(&db, "SELECT nope FROM books;", &out, err, sizeof(err)) ==
+          ERR_EXEC);
+    CHECK(strstr(err, "unknown column") != NULL);
+    sb_free(&out);
+    db_free(&db);
+    clean_file("data/test_func_4.bin");
+    return 1;
+}
+
+static int t_zero_rows(void) {
+    Db db;
+    StrBuf out;
+    char err[256];
+
+    CHECK(prep_db(&db, "data/test_func_5.bin"));
+    sb_init(&out);
+    CHECK(run_batch(&db, "SELECT * FROM books WHERE genre = 'Nope';", &out, err,
+                    sizeof(err)) == ERR_OK);
+    CHECK(strstr(out.buf, "(no rows)") != NULL);
+    CHECK(strstr(out.buf, "rows=0") != NULL);
+    sb_free(&out);
+    db_free(&db);
+    clean_file("data/test_func_5.bin");
+    return 1;
+}
+
+static int t_missing_semi(void) {
+    Db db;
+    StrBuf out;
+    char err[256];
+
+    CHECK(prep_db(&db, "data/test_func_6.bin"));
+    sb_init(&out);
+    CHECK(run_batch(&db, "SELECT * FROM books", &out, err, sizeof(err)) ==
+          ERR_INPUT);
+    CHECK(strstr(err, "end with ';'") != NULL);
+    sb_free(&out);
+    db_free(&db);
+    clean_file("data/test_func_6.bin");
+    return 1;
+}
+
+static int t_bad_insert_count(void) {
+    Db db;
+    StrBuf out;
+    char err[256];
+
+    CHECK(prep_db(&db, "data/test_func_7.bin"));
+    sb_init(&out);
+    CHECK(run_batch(&db, "INSERT INTO books VALUES ('A','B');", &out, err,
+                    sizeof(err)) == ERR_EXEC);
+    CHECK(strstr(err, "needs 3 values") != NULL);
+    sb_free(&out);
+    db_free(&db);
+    clean_file("data/test_func_7.bin");
+    return 1;
+}
+
+static int t_file_text_and_default(void) {
+    char err[256];
+    char *sql;
+    FILE *fp;
+
+    remove("data/input.qsql");
+    fp = fopen("data/input.sql", "wb");
+    CHECK(fp != NULL);
+    CHECK(fwrite("SELECT * FROM books WHERE id = 2;", 1, 33, fp) == 33);
+    fclose(fp);
+
+    CHECK(load_default_sql(&sql, err, sizeof(err)) == ERR_OK);
+    CHECK(strstr(sql, "id = 2") != NULL);
+    free(sql);
+    remove("data/input.sql");
+    return 1;
+}
+
+static int t_file_qsql(void) {
+    char err[256];
+    char *sql;
+
+    remove("data/input.sql");
+    remove("data/input.qsql");
+    CHECK(save_qsql("data/input.qsql", "SELECT * FROM books WHERE id = 3;", err,
+                    sizeof(err)) == ERR_OK);
+    CHECK(load_default_sql(&sql, err, sizeof(err)) == ERR_OK);
+    CHECK(strstr(sql, "id = 3") != NULL);
+    free(sql);
+    remove("data/input.qsql");
+    return 1;
+}
+
+int main(void) {
+    RUN(t_select_id);
+    RUN(t_insert_and_select);
+    RUN(t_bad_table);
+    RUN(t_bad_col);
+    RUN(t_zero_rows);
+    RUN(t_missing_semi);
+    RUN(t_bad_insert_count);
+    RUN(t_file_text_and_default);
+    RUN(t_file_qsql);
+    printf("func: pass=%d fail=%d\n", pass, fail);
+    return fail == 0 ? 0 : 1;
+}
