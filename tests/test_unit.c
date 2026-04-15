@@ -1,5 +1,5 @@
 /* This file runs focused unit tests for parser, storage, and rollback code. */
-#include "sql2.h"
+#include "app.h"
 
 #include <stdio.h>
 #include <stdlib.h>

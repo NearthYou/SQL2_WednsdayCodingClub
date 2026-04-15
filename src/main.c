@@ -1,5 +1,9 @@
 /* This file is the CLI front door for the SQL demo program. */
-#include "sql2.h"
+#include "batch.h"
+#include "cli.h"
+#include "exec.h"
+#include "store.h"
+#include "util.h"
 
 #include <stdlib.h>
 #include <string.h>

@@ -1,5 +1,7 @@
 /* This file executes parsed queries and formats user-facing output. */
-#include "sql2.h"
+#include "batch.h"
+#include "exec.h"
+#include "lex.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -470,4 +472,12 @@ fail:
     free_stmts(&stmts);
     sb_free(&tmp);
     return res;
+}
+
+/* 요약: 조회 결과 집합이 들고 있는 메모리를 정리한다. */
+void free_rows(RowSet *set) {
+    free(set->list);
+    set->list = NULL;
+    set->len = 0;
+    set->cap = 0;
 }

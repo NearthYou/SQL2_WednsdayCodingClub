@@ -1,5 +1,7 @@
 /* This file builds a simple query tree from a token list. */
-#include "sql2.h"
+#include "parse.h"
+
+#include "util.h"
 
 #include <string.h>
 

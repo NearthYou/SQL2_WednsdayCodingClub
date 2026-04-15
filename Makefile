@@ -2,7 +2,7 @@ CC ?= gcc
 CFLAGS ?= -std=c11 -Wall -Wextra -pedantic -Iinclude
 SANFLAGS ?= -fsanitize=address,undefined -g
 
-COMMON = src/util.c src/batch.c src/lex.c src/parse.c src/bpt.c src/store.c src/exec.c
+COMMON = src/util.c src/batch.c src/lex.c src/parse.c src/bpt.c src/store.c src/exec.c src/cli.c
 APP_SRC = $(COMMON) src/main.c src/gen_perf.c
 GEN_SRC = $(COMMON) src/gen_perf.c
 UNIT_SRC = tests/test_unit.c $(COMMON) src/gen_perf.c

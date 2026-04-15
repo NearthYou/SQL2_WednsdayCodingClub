@@ -1,8 +1,17 @@
 /* This file implements a small B+ tree used only for id lookups. */
-#include "sql2.h"
+#include "bpt.h"
 
 #include <stdlib.h>
 #include <string.h>
+
+struct BpNode {
+    int leaf;
+    int nkey;
+    int keys[BP_MAX];
+    int vals[BP_MAX];
+    struct BpNode *kid[BP_ORDER];
+    struct BpNode *next;
+};
 
 typedef struct {
     int has;

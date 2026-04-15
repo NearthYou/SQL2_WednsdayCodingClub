@@ -1,5 +1,7 @@
 /* This file turns one SQL statement into a list of tokens. */
-#include "sql2.h"
+#include "lex.h"
+
+#include "util.h"
 
 #include <ctype.h>
 #include <stdlib.h>
@@ -210,4 +212,12 @@ Err lex_stmt(const char *sql, TokList *out, char *err, size_t cap) {
         }
     }
     return push_end(out, at);
+}
+
+/* 요약: 토큰 목록 메모리를 정리한다. */
+void free_toks(TokList *lst) {
+    free(lst->list);
+    lst->list = NULL;
+    lst->len = 0;
+    lst->cap = 0;
 }

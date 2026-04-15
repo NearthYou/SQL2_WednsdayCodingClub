@@ -43,6 +43,7 @@
 ```powershell
 gcc -std=c11 -Wall -Wextra -pedantic -Iinclude `
   src\util.c src\batch.c src\lex.c src\parse.c src\bpt.c src\store.c `
+  src\cli.c `
   src\exec.c src\main.c src\gen_perf.c -o build\sql2_books.exe
 ```
 

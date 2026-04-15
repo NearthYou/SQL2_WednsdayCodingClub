@@ -1,5 +1,5 @@
 /* This file generates a large binary data file for local perf runs. */
-#include "sql2.h"
+#include "store.h"
 
 #include <stdlib.h>
 

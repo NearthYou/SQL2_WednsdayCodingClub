@@ -1,5 +1,5 @@
 /* This file runs higher-level functional tests against batch execution. */
-#include "sql2.h"
+#include "app.h"
 
 #include <stdio.h>
 #include <stdlib.h>

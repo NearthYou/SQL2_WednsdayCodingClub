@@ -1,10 +1,18 @@
 /* This file loads SQL input and splits one batch into statements. */
-#include "sql2.h"
+#include "batch.h"
+
+#include "util.h"
 
 #include <ctype.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
+
+typedef struct {
+    char data[4];
+    uint32_t ver;
+    uint32_t len;
+} QHdr;
 
 /* 요약: 잘라낸 SQL 조각을 문장 목록에 추가한다. */
 static Err add_stmt(StmtList *out, const char *sql, size_t a, size_t b, int no) {
@@ -241,4 +249,20 @@ Err save_qsql(const char *path, const char *sql, char *err, size_t cap) {
     }
     fclose(fp);
     return ERR_OK;
+}
+
+/* 요약: 문장 목록이 들고 있는 메모리를 모두 정리한다. */
+void free_stmts(StmtList *lst) {
+    size_t i;
+
+    if (lst == NULL) {
+        return;
+    }
+    for (i = 0; i < lst->len; ++i) {
+        free(lst->list[i].txt);
+    }
+    free(lst->list);
+    lst->list = NULL;
+    lst->len = 0;
+    lst->cap = 0;
 }

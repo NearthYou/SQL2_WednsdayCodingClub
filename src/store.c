@@ -1,9 +1,20 @@
 /* This file loads, saves, seeds, and grows the in-memory book cache. */
-#include "sql2.h"
+#include "store.h"
+
+#include "util.h"
 
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
+
+typedef struct {
+    char data[4];
+    uint32_t ver;
+    uint16_t rec_sz;
+    uint16_t keep;
+    uint32_t cnt;
+    uint32_t next_id;
+} DHdr;
 
 /* 요약: 데이터 파일 한 레코드의 고정 크기를 돌려준다. */
 static size_t rec_sz(void) {
