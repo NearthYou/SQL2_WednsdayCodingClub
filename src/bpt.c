@@ -1,6 +1,8 @@
 /* This file implements a small B+ tree used only for id lookups. */
 #include "bpt.h"
 
+#include "util.h"
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -18,6 +20,22 @@ typedef struct {
     int key;
     BpNode *right;
 } Split;
+
+typedef struct {
+    int has;
+    int min_key;
+    int max_key;
+} KeySpan;
+
+typedef struct {
+    size_t leaf_depth;
+    size_t leaf_count;
+    size_t key_count;
+    int have_leaf_depth;
+    int have_prev_key;
+    int prev_key;
+    const BpNode *prev_leaf;
+} CheckCtx;
 
 /* 요약: 새 B+ 트리 노드를 0으로 초기화해 만든다. */
 static BpNode *node_new(int leaf) {
@@ -55,6 +73,22 @@ static int find_pos(BpNode *node, int key) {
         ++at;
     }
     return at;
+}
+
+/* 요약: 검색 키가 들어 있는 리프 노드를 찾는다. */
+static const BpNode *find_leaf(const BpTree *tree, int key) {
+    const BpNode *node;
+    int at;
+
+    node = tree->root;
+    while (node != NULL && !node->leaf) {
+        at = 0;
+        while (at < node->nkey && key >= node->keys[at]) {
+            ++at;
+        }
+        node = node->kid[at];
+    }
+    return node;
 }
 
 /* 요약: 재귀로 키를 넣고 분할 결과를 부모에게 돌려준다. */
@@ -239,25 +273,191 @@ Err bp_put(BpTree *tree, int key, int val) {
 
 /* 요약: id 키로 행 위치를 찾아 돌려준다. */
 int bp_get(const BpTree *tree, int key, int *val) {
-    BpNode *node;
+    const BpNode *node;
     int at;
 
-    node = tree->root;
+    node = find_leaf(tree, key);
     while (node != NULL) {
-        if (node->leaf) {
-            for (at = 0; at < node->nkey; ++at) {
-                if (node->keys[at] == key) {
-                    *val = node->vals[at];
-                    return 1;
-                }
+        for (at = 0; at < node->nkey; ++at) {
+            if (node->keys[at] == key) {
+                *val = node->vals[at];
+                return 1;
             }
-            return 0;
         }
-        at = 0;
-        while (at < node->nkey && key >= node->keys[at]) {
-            ++at;
-        }
-        node = node->kid[at];
+        return 0;
     }
     return 0;
+}
+
+/* 요약: 시작 키 이상이 들어 있는 첫 리프부터 범위를 순회한다. */
+Err bp_visit_range(const BpTree *tree, int min_key, int max_key, BpVisitFn visit,
+                   void *ctx) {
+    const BpNode *node;
+    int i;
+    Err res;
+
+    if (min_key > max_key) {
+        return ERR_ARG;
+    }
+    if (tree == NULL || visit == NULL) {
+        return ERR_ARG;
+    }
+    node = find_leaf(tree, min_key);
+    while (node != NULL) {
+        for (i = 0; i < node->nkey; ++i) {
+            if (node->keys[i] < min_key) {
+                continue;
+            }
+            if (node->keys[i] > max_key) {
+                return ERR_OK;
+            }
+            res = visit(node->keys[i], node->vals[i], ctx);
+            if (res != ERR_OK) {
+                return res;
+            }
+        }
+        node = node->next;
+    }
+    return ERR_OK;
+}
+
+/* 요약: 리프 하나와 리프 체인 정렬 상태를 검사한다. */
+static Err check_leaf(const BpNode *node, size_t depth, CheckCtx *ctx, char *err,
+                      size_t cap, KeySpan *span) {
+    int i;
+
+    if (!ctx->have_leaf_depth) {
+        ctx->leaf_depth = depth;
+        ctx->have_leaf_depth = 1;
+    } else if (ctx->leaf_depth != depth) {
+        err_set(err, cap, "leaf depth mismatch");
+        return ERR_FMT;
+    }
+    if (ctx->prev_leaf != NULL && ctx->prev_leaf->next != node) {
+        err_set(err, cap, "leaf next link is broken");
+        return ERR_FMT;
+    }
+    for (i = 1; i < node->nkey; ++i) {
+        if (node->keys[i - 1] >= node->keys[i]) {
+            err_set(err, cap, "leaf keys are not strictly increasing");
+            return ERR_FMT;
+        }
+    }
+    if (node->nkey > 0) {
+        if (ctx->have_prev_key && ctx->prev_key >= node->keys[0]) {
+            err_set(err, cap, "leaf chain order is not strictly increasing");
+            return ERR_FMT;
+        }
+        ctx->prev_key = node->keys[node->nkey - 1];
+        ctx->have_prev_key = 1;
+        span->has = 1;
+        span->min_key = node->keys[0];
+        span->max_key = node->keys[node->nkey - 1];
+        ctx->key_count += (size_t)node->nkey;
+    } else {
+        span->has = 0;
+    }
+    ctx->leaf_count += 1;
+    ctx->prev_leaf = node;
+    return ERR_OK;
+}
+
+/* 요약: 내부 노드와 하위 서브트리의 키 범위를 재귀 검사한다. */
+static Err check_node(const BpNode *node, size_t depth, int is_root,
+                      CheckCtx *ctx, char *err, size_t cap, KeySpan *span) {
+    int i;
+    KeySpan first;
+    KeySpan prev;
+    KeySpan child;
+    Err res;
+
+    memset(span, 0, sizeof(*span));
+    if (node == NULL) {
+        return ERR_OK;
+    }
+    if (node->nkey < 0 || node->nkey > BP_MAX) {
+        err_set(err, cap, "node key count is out of range");
+        return ERR_FMT;
+    }
+    for (i = 1; i < node->nkey; ++i) {
+        if (node->keys[i - 1] >= node->keys[i]) {
+            err_set(err, cap, "node keys are not strictly increasing");
+            return ERR_FMT;
+        }
+    }
+    if (node->leaf) {
+        return check_leaf(node, depth, ctx, err, cap, span);
+    }
+    if (!is_root && node->nkey == 0) {
+        err_set(err, cap, "internal node must contain at least one key");
+        return ERR_FMT;
+    }
+
+    memset(&first, 0, sizeof(first));
+    memset(&prev, 0, sizeof(prev));
+    for (i = 0; i <= node->nkey; ++i) {
+        if (node->kid[i] == NULL) {
+            err_set(err, cap, "internal node child is missing");
+            return ERR_FMT;
+        }
+        res = check_node(node->kid[i], depth + 1, 0, ctx, err, cap, &child);
+        if (res != ERR_OK) {
+            return res;
+        }
+        if (!child.has) {
+            err_set(err, cap, "empty subtree under internal node");
+            return ERR_FMT;
+        }
+        if (i == 0) {
+            first = child;
+        } else {
+            if (prev.max_key >= child.min_key) {
+                err_set(err, cap, "subtree key ranges overlap");
+                return ERR_FMT;
+            }
+            if (node->keys[i - 1] != child.min_key) {
+                err_set(err, cap, "separator key does not match right subtree");
+                return ERR_FMT;
+            }
+        }
+        prev = child;
+    }
+    span->has = 1;
+    span->min_key = first.min_key;
+    span->max_key = prev.max_key;
+    return ERR_OK;
+}
+
+/* 요약: B+ 트리 구조와 리프 링크를 검사하고 통계를 계산한다. */
+Err bp_check(const BpTree *tree, BpStat *out, char *err, size_t cap) {
+    CheckCtx ctx;
+    KeySpan span;
+    Err res;
+
+    if (out != NULL) {
+        memset(out, 0, sizeof(*out));
+    }
+    if (tree == NULL) {
+        err_set(err, cap, "tree is null");
+        return ERR_ARG;
+    }
+    if (tree->root == NULL) {
+        return ERR_OK;
+    }
+    memset(&ctx, 0, sizeof(ctx));
+    memset(&span, 0, sizeof(span));
+    res = check_node(tree->root, 1, 1, &ctx, err, cap, &span);
+    if (res != ERR_OK) {
+        return res;
+    }
+    if (ctx.prev_leaf != NULL && ctx.prev_leaf->next != NULL) {
+        err_set(err, cap, "last leaf next link must be null");
+        return ERR_FMT;
+    }
+    if (out != NULL) {
+        out->height = ctx.have_leaf_depth ? ctx.leaf_depth : 0;
+        out->leaf_count = ctx.leaf_count;
+        out->key_count = ctx.key_count;
+    }
+    return ERR_OK;
 }

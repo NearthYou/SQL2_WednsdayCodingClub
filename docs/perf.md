@@ -15,32 +15,25 @@
 ```
 
 ## 생성 결과
-- 관측된 벽시계 시간: `2.839 sec`
+- 관측된 벽시계 시간: `3.533 sec`
 
 ## 조회 명령
 ```powershell
 .\build\sql2_books.exe --mode cli --data data\perf_books.bin --summary-only --batch "SELECT * FROM books WHERE id = 1000000;"
+.\build\sql2_books.exe --mode cli --data data\perf_books.bin --summary-only --batch "SELECT * FROM books WHERE id BETWEEN 999001 AND 1000000;"
 .\build\sql2_books.exe --mode cli --data data\perf_books.bin --summary-only --batch "SELECT * FROM books WHERE author = 'Author 999';"
 .\build\sql2_books.exe --mode cli --data data\perf_books.bin --summary-only --batch "SELECT * FROM books WHERE genre = 'Genre 7';"
 ```
 
-성능 측정에서는 `--summary-only`를 사용해, 대량 결과를 표 전체로 출력하지 않고 조회 종류, `rows`, `scan`, `time`만 요약해서 출력합니다.
+성능 측정에서는 `--summary-only`를 사용해 대량 결과를 표 전체로 출력하지 않고,
+조회 종류, `rows`, `scan`, `time`만 요약해서 확인합니다.
 
-## 결과 출력 스킵 명령
-아래 명령은 조회 결과 행을 전부 출력하지 않고, 성능 비교에 필요한 요약만 보여줍니다.
-
-```powershell
-.\build\sql2_books.exe --mode cli --data data\perf_books.bin --summary-only --batch "SELECT * FROM books WHERE id = 1000000;"
-.\build\sql2_books.exe --mode cli --data data\perf_books.bin --summary-only --batch "SELECT * FROM books WHERE author = 'Author 999';"
-.\build\sql2_books.exe --mode cli --data data\perf_books.bin --summary-only --batch "SELECT * FROM books WHERE genre = 'Genre 7';"
-```
-
-예상 출력 형식:
+## 예시 출력 형식
 ```text
-[author lookup]
+[id range lookup]
 rows : 1000
-scan : Linear
-time : 115.251 ms
+scan : B+Tree
+time : 0.021 ms
 ```
 
 ## 조회 결과
@@ -48,19 +41,24 @@ time : 115.251 ms
   - rows: `1`
   - scan: `B+Tree`
   - time: `0.001 ms`
+- `WHERE id BETWEEN 999001 AND 1000000`
+  - rows: `1000`
+  - scan: `B+Tree`
+  - time: `0.021 ms`
 - `WHERE author = 'Author 999'`
   - rows: `1000`
   - scan: `Linear`
-  - time: `115.251 ms`
+  - time: `103.440 ms`
 - `WHERE genre = 'Genre 7'`
   - rows: `50000`
   - scan: `Linear`
-  - time: `69.288 ms`
+  - time: `108.874 ms`
 
 ## 수치 해석
-- 정확한 `id` 검색은 B+ 트리를 사용하므로 거의 상수 시간에 가깝게 유지됩니다.
-- `author`와 `genre` 검색은 설계상 전체 행을 선형 탐색합니다.
-- 선형 탐색 시간은 실행 시점에 따라 조금씩 달라질 수 있지만, 조회 경로 차이는 분명하게 유지됩니다.
+- 정확한 `id` 단건 조회는 B+ 트리에서 바로 리프를 찾아 거의 상수 시간에 가깝게 동작합니다.
+- `id BETWEEN`도 B+ 트리 리프 링크를 따라가므로, 같은 `1000`건 조회라도 선형 탐색보다 훨씬 빠릅니다.
+- `author`와 `genre` 검색은 설계상 전체 행을 선형 탐색하므로 데이터가 커질수록 비용이 그대로 증가합니다.
+- 단건 인덱스 조회와 범위 인덱스 조회, 선형 탐색 사이의 경로 차이가 숫자로 분명하게 드러납니다.
 
 ## 로컬 재실행 명령
 ```powershell

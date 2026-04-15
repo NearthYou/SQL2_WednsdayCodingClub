@@ -81,10 +81,31 @@ static int t_lex_parse_select(void) {
     CHECK(qry.kind == Q_SELECT);
     CHECK(qry.cols.len == 2);
     CHECK(strcmp(qry.cols.cols[0], "title") == 0);
-    CHECK(qry.cond.used == 1);
+    CHECK(qry.cond.kind == COND_EQ);
     CHECK(strcmp(qry.cond.col, "id") == 0);
     CHECK(qry.cond.val.kind == VAL_INT);
     CHECK(qry.cond.val.num == 7);
+    free_toks(&toks);
+    return 1;
+}
+
+/* 요약: SELECT BETWEEN 문이 범위 조건으로 파싱되는지 본다. */
+static int t_lex_parse_between(void) {
+    TokList toks;
+    Qry qry;
+    char err[256];
+    Err res;
+
+    res = lex_stmt("SELECT * FROM books WHERE id BETWEEN 3 AND 9", &toks, err,
+                   sizeof(err));
+    CHECK(res == ERR_OK);
+    res = parse_stmt(&toks, &qry, err, sizeof(err));
+    CHECK(res == ERR_OK);
+    CHECK(qry.kind == Q_SELECT);
+    CHECK(qry.cond.kind == COND_RANGE);
+    CHECK(strcmp(qry.cond.col, "id") == 0);
+    CHECK(qry.cond.min_num == 3);
+    CHECK(qry.cond.max_num == 9);
     free_toks(&toks);
     return 1;
 }
@@ -112,6 +133,8 @@ static int t_lex_parse_insert(void) {
 /* 요약: B+ 트리 삽입과 단건 검색이 맞는지 확인한다. */
 static int t_bp_tree(void) {
     BpTree tree;
+    BpStat stat;
+    char err[256];
     int i;
     int val;
 
@@ -124,6 +147,48 @@ static int t_bp_tree(void) {
         CHECK(val == i * 10);
     }
     CHECK(bp_get(&tree, 9999, &val) == 0);
+    CHECK(bp_check(&tree, &stat, err, sizeof(err)) == ERR_OK);
+    CHECK(stat.height > 1);
+    CHECK(stat.leaf_count > 1);
+    CHECK(stat.key_count == 200);
+    bp_free(&tree);
+    return 1;
+}
+
+typedef struct {
+    int vals[16];
+    size_t len;
+} RangeBuf;
+
+/* 요약: 범위 순회가 넘겨준 인덱스를 순서대로 기록한다. */
+static Err grab_range(int key, int val, void *ctx) {
+    RangeBuf *buf;
+
+    (void)key;
+    buf = (RangeBuf *)ctx;
+    if (buf->len >= sizeof(buf->vals) / sizeof(buf->vals[0])) {
+        return ERR_EXEC;
+    }
+    buf->vals[buf->len++] = val;
+    return ERR_OK;
+}
+
+/* 요약: B+ 트리 범위 순회가 양 끝 포함과 순서를 지키는지 본다. */
+static int t_bp_range(void) {
+    BpTree tree;
+    RangeBuf buf;
+    int i;
+
+    memset(&buf, 0, sizeof(buf));
+    bp_init(&tree);
+    for (i = 40; i >= 1; --i) {
+        CHECK(bp_put(&tree, i, i * 10) == ERR_OK);
+    }
+    CHECK(bp_visit_range(&tree, 10, 15, grab_range, &buf) == ERR_OK);
+    CHECK(buf.len == 6);
+    for (i = 0; i < (int)buf.len; ++i) {
+        CHECK(buf.vals[i] == (10 + i) * 10);
+    }
     bp_free(&tree);
     return 1;
 }
@@ -230,8 +295,10 @@ int main(void) {
     RUN(t_split_ok);
     RUN(t_split_empty_stmt);
     RUN(t_lex_parse_select);
+    RUN(t_lex_parse_between);
     RUN(t_lex_parse_insert);
     RUN(t_bp_tree);
+    RUN(t_bp_range);
     RUN(t_qsql_roundtrip);
     RUN(t_db_save_load);
     RUN(t_bad_data_hdr);

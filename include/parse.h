@@ -16,10 +16,18 @@ typedef struct {
     char str[VAL_LEN];
 } Val;
 
+typedef enum {
+    COND_NONE = 0,
+    COND_EQ,
+    COND_RANGE
+} CondKind;
+
 typedef struct {
-    int used;
+    CondKind kind;
     char col[NAME_LEN];
     Val val;
+    long min_num;
+    long max_num;
 } Cond;
 
 typedef struct {

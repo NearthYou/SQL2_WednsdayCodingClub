@@ -22,6 +22,8 @@ typedef enum {
     KW_INSERT,
     KW_FROM,
     KW_WHERE,
+    KW_BETWEEN,
+    KW_AND,
     KW_VALUES,
     KW_INTO
 } Kw;

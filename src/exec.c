@@ -55,10 +55,13 @@ static const char *scan_name(ScanKind scan) {
 static const char *sum_head(const Qry *qry) {
     int cid;
 
-    if (!qry->cond.used) {
+    if (qry->cond.kind == COND_NONE) {
         return "full scan";
     }
     cid = col_id(qry->cond.col);
+    if (qry->cond.kind == COND_RANGE) {
+        return cid == COL_ID ? "id range lookup" : "range lookup";
+    }
     switch (cid) {
     case COL_ID:
         return "id lookup";
@@ -110,8 +113,12 @@ static const char *cell_txt(const Book *row, int cid, char *buf, size_t cap) {
 static int row_match(const Book *row, const Cond *cond, char *err, size_t cap) {
     int cid;
 
-    if (!cond->used) {
+    if (cond->kind == COND_NONE) {
         return 1;
+    }
+    if (cond->kind != COND_EQ) {
+        err_set(err, cap, "BETWEEN is only supported for id");
+        return -1;
     }
     cid = col_id(cond->col);
     if (cid < 0) {
@@ -138,6 +145,19 @@ static int row_match(const Book *row, const Cond *cond, char *err, size_t cap) {
     return strcmp(row->genre, cond->val.str) == 0;
 }
 
+typedef struct {
+    RowSet *set;
+} RangeFill;
+
+/* 요약: 범위 순회가 넘겨준 행 인덱스를 결과 집합에 모은다. */
+static Err add_range_hit(int key, int val, void *ctx) {
+    RangeFill *fill;
+
+    (void)key;
+    fill = (RangeFill *)ctx;
+    return row_add(fill->set, val);
+}
+
 /* 요약: 조건에 맞는 행 인덱스를 찾고 시간도 잰다. */
 static Err find_rows(Db *db, const Qry *qry, RowSet *set, char *err,
                      size_t cap) {
@@ -147,10 +167,34 @@ static Err find_rows(Db *db, const Qry *qry, RowSet *set, char *err,
     int idx;
     int hit;
     Err res;
+    int cid;
+    RangeFill fill;
 
     memset(set, 0, sizeof(*set));
     a = now_ms();
-    if (qry->cond.used && col_id(qry->cond.col) == COL_ID) {
+    cid = qry->cond.kind == COND_NONE ? -1 : col_id(qry->cond.col);
+    if (qry->cond.kind == COND_RANGE) {
+        if (cid < 0) {
+            err_set(err, cap, "unknown column in WHERE: %s", qry->cond.col);
+            return ERR_EXEC;
+        }
+        if (cid != COL_ID) {
+            err_set(err, cap, "BETWEEN is only supported for id");
+            return ERR_EXEC;
+        }
+        if (qry->cond.min_num > qry->cond.max_num) {
+            err_set(err, cap, "id range start must be <= range end");
+            return ERR_EXEC;
+        }
+        set->scan = SCAN_BTREE;
+        fill.set = set;
+        res = bp_visit_range(&db->idx, (int)qry->cond.min_num,
+                             (int)qry->cond.max_num, add_range_hit, &fill);
+        if (res != ERR_OK) {
+            err_set(err, cap, "out of memory while storing row hits");
+            return res;
+        }
+    } else if (qry->cond.kind == COND_EQ && cid == COL_ID) {
         set->scan = SCAN_BTREE;
         if (qry->cond.val.kind != VAL_INT) {
             err_set(err, cap, "id WHERE value must be an integer");

@@ -67,6 +67,27 @@ static int t_select_id(void) {
     return 1;
 }
 
+/* 요약: id 범위 조회가 B+ 트리로 처리되고 양 끝을 포함하는지 본다. */
+static int t_select_id_range(void) {
+    Db db;
+    StrBuf out;
+    char err[256];
+
+    CHECK(prep_db(&db, "data/test_func_range.bin"));
+    sb_init(&out);
+    CHECK(run_batch(&db, "SELECT * FROM books WHERE id BETWEEN 2 AND 4;", 0,
+                    &out, err, sizeof(err)) == ERR_OK);
+    CHECK(strstr(out.buf, "Clean Architecture") != NULL);
+    CHECK(strstr(out.buf, "The Hobbit") != NULL);
+    CHECK(strstr(out.buf, "The Lord of the Rings") != NULL);
+    CHECK(strstr(out.buf, "rows=3") != NULL);
+    CHECK(strstr(out.buf, "scan=B+Tree") != NULL);
+    sb_free(&out);
+    db_free(&db);
+    clean_file("data/test_func_range.bin");
+    return 1;
+}
+
 /* 요약: INSERT 뒤 같은 배치에서 다시 조회할 수 있는지 본다. */
 static int t_insert_and_select(void) {
     Db db;
@@ -160,6 +181,26 @@ static int t_summary_only(void) {
     return 1;
 }
 
+/* 요약: summary-only 범위 조회가 B+ 트리 요약만 출력하는지 본다. */
+static int t_summary_id_range(void) {
+    Db db;
+    StrBuf out;
+    char err[256];
+
+    CHECK(prep_db(&db, "data/test_func_range_sum.bin"));
+    sb_init(&out);
+    CHECK(run_batch(&db, "SELECT * FROM books WHERE id BETWEEN 3 AND 5;", 1,
+                    &out, err, sizeof(err)) == ERR_OK);
+    CHECK(strstr(out.buf, "[id range lookup]") != NULL);
+    CHECK(strstr(out.buf, "rows : 3") != NULL);
+    CHECK(strstr(out.buf, "scan : B+Tree") != NULL);
+    CHECK(strstr(out.buf, "| id |") == NULL);
+    sb_free(&out);
+    db_free(&db);
+    clean_file("data/test_func_range_sum.bin");
+    return 1;
+}
+
 /* 요약: 마지막 세미콜론 누락을 입력 오류로 잡는지 본다. */
 static int t_missing_semi(void) {
     Db db;
@@ -191,6 +232,45 @@ static int t_bad_insert_count(void) {
     sb_free(&out);
     db_free(&db);
     clean_file("data/test_func_7.bin");
+    return 1;
+}
+
+/* 요약: 잘못된 id 범위는 실행 단계에서 거절되고 롤백된다. */
+static int t_bad_id_range(void) {
+    Db db;
+    StrBuf out;
+    char err[256];
+
+    CHECK(prep_db(&db, "data/test_func_bad_range.bin"));
+    sb_init(&out);
+    CHECK(run_batch(&db,
+                    "INSERT INTO books VALUES ('RB','Range','Tmp'); SELECT * "
+                    "FROM books WHERE id BETWEEN 9 AND 1;",
+                    0, &out, err, sizeof(err)) == ERR_EXEC);
+    CHECK(strstr(err, "range start must be <=") != NULL);
+    CHECK(run_batch(&db, "SELECT * FROM books WHERE author = 'Range';", 0, &out,
+                    err, sizeof(err)) == ERR_OK);
+    CHECK(strstr(out.buf, "(no rows)") != NULL);
+    sb_free(&out);
+    db_free(&db);
+    clean_file("data/test_func_bad_range.bin");
+    return 1;
+}
+
+/* 요약: BETWEEN 이 id 외 컬럼에 쓰이면 명확히 거절된다. */
+static int t_between_non_id(void) {
+    Db db;
+    StrBuf out;
+    char err[256];
+
+    CHECK(prep_db(&db, "data/test_func_bad_between.bin"));
+    sb_init(&out);
+    CHECK(run_batch(&db, "SELECT * FROM books WHERE author BETWEEN 1 AND 2;", 0,
+                    &out, err, sizeof(err)) == ERR_EXEC);
+    CHECK(strstr(err, "BETWEEN is only supported for id") != NULL);
+    sb_free(&out);
+    db_free(&db);
+    clean_file("data/test_func_bad_between.bin");
     return 1;
 }
 
@@ -232,13 +312,17 @@ static int t_file_qsql(void) {
 /* 요약: 기능 테스트 묶음을 차례로 실행한다. */
 int main(void) {
     RUN(t_select_id);
+    RUN(t_select_id_range);
     RUN(t_insert_and_select);
     RUN(t_bad_table);
     RUN(t_bad_col);
     RUN(t_zero_rows);
     RUN(t_summary_only);
+    RUN(t_summary_id_range);
     RUN(t_missing_semi);
     RUN(t_bad_insert_count);
+    RUN(t_bad_id_range);
+    RUN(t_between_non_id);
     RUN(t_file_text_and_default);
     RUN(t_file_qsql);
     printf("func: pass=%d fail=%d\n", pass, fail);

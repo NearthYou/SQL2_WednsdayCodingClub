@@ -4,6 +4,7 @@ $ErrorActionPreference = "Stop"
 & "$PSScriptRoot/build.ps1"
 & "build/test_unit.exe"
 & "build/test_func.exe"
+& "$PSScriptRoot/acceptance.ps1" -SkipBuild
 
 $smoke = & "build/sql2_books.exe" --mode cli --batch "SELECT * FROM books WHERE id = 1;"
 Write-Host $smoke

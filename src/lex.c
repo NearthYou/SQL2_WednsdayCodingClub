@@ -21,6 +21,12 @@ static Kw find_kw(const char *txt) {
     if (str_ieq(txt, "WHERE")) {
         return KW_WHERE;
     }
+    if (str_ieq(txt, "BETWEEN")) {
+        return KW_BETWEEN;
+    }
+    if (str_ieq(txt, "AND")) {
+        return KW_AND;
+    }
     if (str_ieq(txt, "VALUES")) {
         return KW_VALUES;
     }

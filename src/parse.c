@@ -88,6 +88,20 @@ static Err parse_val(Psr *ps, Val *val, char *err, size_t cap) {
     return ERR_PARSE;
 }
 
+/* 요약: 정수 하나를 읽어 long 값으로 저장한다. */
+static Err parse_int(Psr *ps, long *out, char *err, size_t cap,
+                     const char *what) {
+    const Tok *tok;
+
+    if (!tok_is(ps, TK_INT, KW_NONE)) {
+        err_set(err, cap, "expected %s near pos %zu", what, cur(ps)->pos);
+        return ERR_PARSE;
+    }
+    tok = take(ps);
+    *out = tok->num;
+    return ERR_OK;
+}
+
 /* 요약: SELECT의 컬럼 목록이나 별표를 파싱한다. */
 static Err parse_cols(Psr *ps, ColList *cols, char *err, size_t cap) {
     Err res;
@@ -126,16 +140,30 @@ static Err parse_cond(Psr *ps, Cond *cond, char *err, size_t cap) {
         return ERR_OK;
     }
     take(ps);
-    cond->used = 1;
     res = parse_word(ps, cond->col, sizeof(cond->col), err, cap, "column name");
     if (res != ERR_OK) {
         return res;
     }
-    res = need(ps, TK_EQ, KW_NONE, err, cap, "'='");
-    if (res != ERR_OK) {
-        return res;
+    if (tok_is(ps, TK_EQ, KW_NONE)) {
+        cond->kind = COND_EQ;
+        take(ps);
+        return parse_val(ps, &cond->val, err, cap);
     }
-    return parse_val(ps, &cond->val, err, cap);
+    if (tok_is(ps, TK_WORD, KW_BETWEEN)) {
+        cond->kind = COND_RANGE;
+        take(ps);
+        res = parse_int(ps, &cond->min_num, err, cap, "range start");
+        if (res != ERR_OK) {
+            return res;
+        }
+        res = need(ps, TK_WORD, KW_AND, err, cap, "AND");
+        if (res != ERR_OK) {
+            return res;
+        }
+        return parse_int(ps, &cond->max_num, err, cap, "range end");
+    }
+    err_set(err, cap, "expected '=' or BETWEEN near pos %zu", cur(ps)->pos);
+    return ERR_PARSE;
 }
 
 /* 요약: SELECT 문 전체를 Qry 구조체로 만든다. */
