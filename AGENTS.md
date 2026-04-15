@@ -50,9 +50,7 @@
 - Ran local build, test, demo, and perf commands
 
 ## Remaining
-- Stage and commit logical change sets
-- Push `SS` if allowed
-- Create GitHub issues and PR if remote operations succeed
+- GitHub issue drafts are ready, but actual issue creation is still manual with the current available tool set
 
 ## Command Log
 - `git status --short --branch` -> clean `main`
@@ -67,6 +65,8 @@
 - `powershell -File scripts/test.ps1` -> local scripted build and tests passed
 - `powershell -File scripts/demo.ps1` -> demo batch ran successfully
 - `powershell -File scripts/perf.ps1 -Count 1000000` -> generated 1,000,000 rows and measured lookup timings
+- `git push -u origin SS` -> pushed local branch to remote
+- GitHub PR created -> `https://github.com/NearthYou/SQL2_WednsdayCodingClub/pull/1`
 
 ## Decision Log
 - Use one working log file: `AGENTS.md`
@@ -81,13 +81,14 @@
 - Resolved by rerunning the git command with elevated permission
 - PowerShell build script first had bad array passing and hid gcc failures behind old binaries
 - Resolved by switching to explicit argument arrays and exit-code checks
+- The current GitHub tool set in this session supports PR creation, but not direct issue creation
+- Issue drafts were left in `docs/github/issue-*.md`
 
 ## Current State
 - Implementation, docs, scripts, and CI are in place
 - Local validation is complete
-- Preparing git commits and remote GitHub actions
+- `SS` is pushed and PR #1 is open
 
 ## Next Work
-- Stage and commit code, tests, docs, and CI
-- Push `SS`
-- Create or update GitHub issues and PR
+- Wait for review on PR #1
+- Create GitHub issues manually from `docs/github/issue-*.md` if issue tracking is still needed
