@@ -1,4 +1,4 @@
-<img width="500" height="500" alt="image" src="https://github.com/user-attachments/assets/327b1c2f-ea0f-47e5-b412-9cab0476266c" />
+<img width="400" height="400" alt="image" src="https://github.com/user-attachments/assets/327b1c2f-ea0f-47e5-b412-9cab0476266c" />
 
 # B+Tree SQL 데모
 
