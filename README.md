@@ -1,3 +1,5 @@
+<img width="400" height="400" alt="image" src="https://github.com/user-attachments/assets/327b1c2f-ea0f-47e5-b412-9cab0476266c" />
+
 # B+Tree SQL 데모
 
 > `books` 단일 테이블을 대상으로,  
@@ -7,11 +9,11 @@
 
 ## 핵심 요약
 
-| 질문 | 답 |
-| --- | --- |
-| 무엇을 보여주나? | `SELECT`, `INSERT`, 배치 실행, 롤백, 바이너리 저장 |
-| 무엇이 핵심인가? | `WHERE id = ...`, `WHERE id BETWEEN ... AND ...`는 B+Tree 사용 |
-| 발표에서 무엇을 강조하나? | **같은 1,000건 조회도 B+Tree가 Linear보다 약 4,900배 빠름** |
+| 내용 |
+| --- |
+| `SELECT`, `INSERT`, 배치 실행, 롤백, 바이너리 저장 |
+| `WHERE id = ...`, `WHERE id BETWEEN ... AND ...`는 B+Tree 사용 |
+| **같은 1,000건 조회도 B+Tree가 Linear보다 약 4,900배 빠름** |
 
 ### 성능 하이라이트
 
