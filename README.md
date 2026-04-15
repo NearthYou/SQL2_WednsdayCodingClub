@@ -1,158 +1,90 @@
-# C 기반 도서관 SQL 데모
+# B+Tree SQL 데모
 
-이 프로젝트는 `books` 테이블 하나를 대상으로 동작하는 작은 C 기반 SQL 데모입니다.
-핵심 목표는 읽기 쉬운 구조를 유지하면서, `WHERE id = ...`와
-`WHERE id BETWEEN ... AND ...`가 B+ 트리 인덱스를 타고,
-그 외 조건은 선형 탐색으로 처리되는 흐름을 명확하게 보여주는 것입니다.
+> `books` 단일 테이블을 대상으로,  
+> `id` 조건은 **B+Tree**, 그 외 조건은 **Linear Scan**으로 처리하는 미니 SQL 엔진입니다.
 
-## 프로젝트 개요
-- 시작 시 `data/books.bin`을 메모리로 불러옵니다.
-- `SELECT`, `INSERT`, 다중 SQL 배치를 지원합니다.
-- `WHERE id = ...`는 B+ 트리 단건 조회를 사용합니다.
-- `WHERE id BETWEEN a AND b`는 B+ 트리 리프 링크 범위 조회를 사용합니다.
-- `title`, `author`, `genre`, 전체 조회는 선형 탐색만 사용합니다.
-- 배치 출력은 내부 버퍼에 모아 두었다가 전부 성공했을 때만 최종 출력합니다.
-- 배치 도중 실패하면 행 수와 `next_id`를 되돌리고 B+ 트리를 다시 구성합니다.
-- 저장은 임시 파일 교체 방식으로 처리합니다.
+---
 
-## 스키마
-`books`
-- `id` : 자동 증가 정수
-- `title` : 문자열
-- `author` : 문자열
-- `genre` : 문자열
+## 핵심 요약
 
-`INSERT` 값은 반드시 `title`, `author`, `genre` 순서여야 합니다.
+| 질문 | 답 |
+| --- | --- |
+| 무엇을 보여주나? | `SELECT`, `INSERT`, 배치 실행, 롤백, 바이너리 저장 |
+| 무엇이 핵심인가? | `WHERE id = ...`, `WHERE id BETWEEN ... AND ...`는 B+Tree 사용 |
+| 발표에서 무엇을 강조하나? | **같은 1,000건 조회도 B+Tree가 Linear보다 약 4,900배 빠름** |
 
-## 저장소 구조
-- `src/` : 엔진 소스 코드
-- `include/` : 공용 헤더
-- `tests/` : 단위 테스트와 기능 테스트
-- `data/` : 바이너리 데이터와 데모 쿼리
-- `docs/` : 설계, 테스트, 성능, GitHub 초안 문서
-- `scripts/` : 로컬 PowerShell 자동화 스크립트
-- `.github/workflows/` : CI 설정
-- `AGENTS.md` : 저장소 규칙과 작업 로그
+### 성능 하이라이트
 
-## 빌드 방법
-### PowerShell
-```powershell
-./scripts/build.ps1
+| 쿼리 | rows | scan | time |
+| --- | ---: | --- | ---: |
+| `WHERE id = 1000000` | 1 | `B+Tree` | `0.001 ms` |
+| `WHERE id BETWEEN 999001 AND 1000000` | 1000 | `B+Tree` | `0.021 ms` |
+| `WHERE author = 'Author 999'` | 1000 | `Linear` | `103.440 ms` |
+
+> 같은 `1000건` 결과 기준으로 보면  
+> `id BETWEEN` 조회는 `author` 선형 탐색보다 약 `4,925x` 빠릅니다.
+
+---
+
+## 왜 빨라지는가
+
+```mermaid
+flowchart LR
+    Q["SELECT ... WHERE ..."] --> C{"조건이 id 인가?"}
+    C -->|YES| B["B+Tree로 리프 탐색"]
+    C -->|NO| L["rows 전체 선형 탐색"]
+    B --> R["결과 RowSet"]
+    L --> R
+    R --> O["rows / scan / time 출력"]
 ```
 
-### GCC 직접 실행
-```powershell
-gcc -std=c11 -Wall -Wextra -pedantic -Iinclude `
-  src\util.c src\batch.c src\lex.c src\parse.c src\bpt.c src\store.c `
-  src\cli.c src\exec.c src\main.c src\gen_perf.c -o build\sql2_books.exe
+- `id = n`은 B+Tree 단건 조회
+- `id BETWEEN a AND b`는 B+Tree 리프 링크 범위 조회
+- `author`, `genre`, `title`, 전체 조회는 선형 탐색
+
+---
+
+## 처리 흐름
+
+```mermaid
+flowchart TD
+    A["SQL batch"] --> B["split_sql"]
+    B --> C["lex_stmt"]
+    C --> D["parse_stmt"]
+    D --> E["run_qry"]
+    E --> F{"SELECT / INSERT"}
+    F --> G["B+Tree 또는 Linear 조회"]
+    F --> H["row 추가 + id 인덱스 반영"]
+    G --> I["RowSet"]
+    H --> J["Db rows"]
+    J --> K["BKDB file 저장"]
+    I --> L["출력 버퍼"]
 ```
 
-### Make
-Linux 기반 CI에서 사용합니다.
-```bash
-make
-```
+### 지원 문법
 
-## 실행 방법
-### 대화형 모드
-```powershell
-.\build\sql2_books.exe
-```
-
-### 비대화형 CLI 예시
-```powershell
-.\build\sql2_books.exe --mode cli --batch "SELECT * FROM books WHERE id = 1;"
-.\build\sql2_books.exe --mode cli --batch "SELECT * FROM books WHERE id BETWEEN 2 AND 4;"
-.\build\sql2_books.exe --mode cli --batch "INSERT INTO books VALUES ('Book','Author','Genre');"
-```
-
-### 파일 모드 예시
-```powershell
-.\build\sql2_books.exe --mode file --file data\demo_queries.sql
-```
-
-### 기본 파일 탐색 규칙
-파일 모드에서 경로를 비워 두면 아래 순서대로 찾습니다.
-1. `./data/input.qsql`
-2. `./data/input.sql`
-
-## 지원 SQL 문법
 - `SELECT * FROM books;`
-- `SELECT title,author FROM books;`
 - `SELECT * FROM books WHERE id = 3;`
 - `SELECT * FROM books WHERE id BETWEEN 10 AND 20;`
 - `SELECT title,genre FROM books WHERE author = 'George Orwell';`
 - `INSERT INTO books VALUES ('Book','Author','Genre');`
-- `;`로 구분된 다중 문장 배치
 
-## 입력 규칙
-- 마지막 세미콜론은 반드시 필요합니다.
-- `;;` 같은 빈 문장은 오류로 처리합니다.
-- 문자열 리터럴 안의 세미콜론은 배치를 나누지 않습니다.
-- SQL 문자열 리터럴은 작은따옴표를 사용합니다.
-- 키워드는 대소문자를 구분하지 않습니다.
-- `BETWEEN`은 현재 `id` 컬럼에만 허용합니다.
+---
 
-## 빠른 데모
-### 데모 실행
-```powershell
-./scripts/demo.ps1
+## 실패해도 안전한 이유
+
+```mermaid
+flowchart LR
+    S["배치 시작"] --> M["len / next_id 저장"]
+    M --> X["문장 순차 실행"]
+    X --> Y{"모두 성공?"}
+    Y -->|YES| Z["db_save + 최종 출력"]
+    Y -->|NO| R["len / next_id 복원"]
+    R --> T["db_reidx로 B+Tree 재구성"]
 ```
 
-### 데모 쿼리 흐름
-`data/demo_queries.sql`
-- `id` 기준 B+ 트리 단건 조회
-- `id` 기준 B+ 트리 범위 조회
-- `author` 기준 선형 탐색
-- `genre` 기준 선형 탐색
-- 성공적인 `INSERT`
-- 이어지는 `SELECT`
+- 출력은 바로 찍지 않고 버퍼에 모아 둡니다.
+- 실패하면 `len`, `next_id`를 되돌리고 B+Tree를 다시 만듭니다.
+- 저장은 `.tmp` 파일 교체 방식이라 부분 저장 위험을 줄였습니다.
 
-## 테스트
-### 로컬 전체 검증
-```powershell
-./scripts/test.ps1
-```
-
-이 스크립트는 아래를 순서대로 실행합니다.
-- 빌드
-- 단위 테스트
-- 기능 테스트
-- acceptance 시나리오
-- 기본 smoke 실행
-
-### acceptance 시나리오만 실행
-```powershell
-./scripts/acceptance.ps1
-```
-
-## 성능 테스트
-1,000,000건 데이터를 생성하고 아래 조회를 비교합니다.
-- `id` 단건 조회
-- `id` 범위 조회
-- `author` 선형 탐색
-- `genre` 선형 탐색
-
-```powershell
-./scripts/perf.ps1 -Count 1000000
-```
-
-실측 결과는 [docs/perf.md](docs/perf.md)에 정리되어 있습니다.
-
-## 바이너리 포맷
-- Query 바이너리 포맷: [docs/binary-format.md](docs/binary-format.md)
-- Data 바이너리 포맷: [docs/binary-format.md](docs/binary-format.md)
-
-## 차별화 포인트
-- `id =`뿐 아니라 `id BETWEEN`도 B+ 트리 리프 링크로 처리합니다.
-- B+ 트리 검증 API가 있어 트리 높이, 리프 수, 키 수를 검사할 수 있습니다.
-- 배치 출력 버퍼링과 롤백을 함께 적용해 실패 배치의 부분 출력이 남지 않습니다.
-
-## CI
-GitHub Actions에서는 아래 작업을 실행합니다.
-- build
-- unit tests
-- function tests
-- sanitizer build and tests
-
-대규모 성능 테스트와 acceptance 시나리오는 로컬 실행용으로 유지합니다.
+---
