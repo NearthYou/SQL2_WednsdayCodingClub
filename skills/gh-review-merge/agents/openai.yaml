@@ -1,0 +1,4 @@
+interface:
+  display_name: "PR Review & Merge"
+  short_description: "Inspect PR feedback, apply fixes, push updates, and finish the merge."
+  default_prompt: "Use $gh-review-merge to inspect PR comments, apply valid fixes, reply to reviewers, and merge the branch."

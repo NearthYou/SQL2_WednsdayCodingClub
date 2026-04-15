@@ -52,6 +52,10 @@
 - 주요 Markdown 문서를 한국어로 정리했다
 - 모든 함수 정의 바로 위에 요약 주석을 추가했다
 - 머메이드 클래스 다이어그램 문서를 추가했다
+- `WHERE id BETWEEN a AND b` 범위 조회와 acceptance 시나리오를 추가했다
+- PR 리뷰 코멘트를 반영해 롤백, 파일 검증, 스크립트, 문서를 보강했다
+- PR #1을 `main`에 병합했다
+- PR 리뷰 대응과 병합 절차를 정리한 `skills/gh-review-merge` 스킬을 추가했다
 
 ## 남은 일
 - GitHub 이슈 초안은 준비됐지만, 현재 사용 가능한 도구 범위에서는 실제 이슈 생성은 수동으로 해야 한다
@@ -74,6 +78,10 @@
 - `.\build\test_func.exe` -> 기능 테스트 10개 통과
 - `git push -u origin SS` -> 원격 브랜치 푸시 성공
 - GitHub PR 생성 -> `https://github.com/NearthYou/SQL2_WednsdayCodingClub/pull/1`
+- `powershell -ExecutionPolicy Bypass -File .\scripts\test.ps1` -> unit 12, func 14, acceptance 통과
+- `powershell -ExecutionPolicy Bypass -File .\scripts\perf.ps1 -Count 1000000` -> id 단건, id 범위, author, genre 성능 재측정
+- `git merge --no-ff SS -m "Merge pull request #1 from NearthYou/SS"` -> 로컬 `main` 병합 성공
+- `git push origin main` -> 원격 `main` 반영 성공
 
 ## 의사결정 기록
 - 작업 로그 파일은 `AGENTS.md` 하나만 사용한다
@@ -92,12 +100,14 @@
 - 현재 세션의 GitHub 도구는 PR 생성은 지원하지만 이슈 생성은 직접 지원하지 않는다
 - 이슈 초안은 `docs/github/issue-*.md`에 남겨 두었다
 - 일부 머메이드 렌더러는 배열과 포인터 표기가 많은 클래스 다이어그램을 제대로 그리지 못해, 더 단순한 표기로 다시 정리했다
+- 이 환경에는 Python 런타임이 없어 `skill-creator`의 `init_skill.py`, `quick_validate.py`를 직접 실행할 수 없다
 
 ## 현재 상태
-- 구현, 문서, 스크립트, CI가 모두 들어가 있다
-- 로컬 검증이 끝났다
-- `SS`가 원격에 푸시되어 있고 PR #1이 열려 있다
+- 구현, 문서, 스크립트, CI가 모두 `main`에 병합되어 있다
+- 로컬 검증과 PR 리뷰 반영이 끝났다
+- PR #1은 병합 완료 상태다
+- `skills/gh-review-merge`가 저장소에 추가되어 있다
 
 ## 다음 작업
-- PR #1 리뷰를 기다린다
+- 새 스킬을 실제 PR 정리 작업에 다시 써 보며 보완점을 찾는다
 - 이슈 추적이 필요하면 `docs/github/issue-*.md`를 바탕으로 GitHub 이슈를 수동 생성한다
