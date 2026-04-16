@@ -26,15 +26,6 @@
 
 성능 측정에서는 `--summary-only`를 사용해, 대량 결과를 표 전체로 출력하지 않고 조회 종류, `rows`, `scan`, `time`만 요약해서 출력합니다.
 
-## 결과 출력 스킵 명령
-아래 명령은 조회 결과 행을 전부 출력하지 않고, 성능 비교에 필요한 요약만 보여줍니다.
-
-```powershell
-.\build\sql2_books.exe --mode cli --data data\perf_books.bin --summary-only --batch "SELECT * FROM books WHERE id = 1000000;"
-.\build\sql2_books.exe --mode cli --data data\perf_books.bin --summary-only --batch "SELECT * FROM books WHERE author = 'Author 999';"
-.\build\sql2_books.exe --mode cli --data data\perf_books.bin --summary-only --batch "SELECT * FROM books WHERE genre = 'Genre 7';"
-```
-
 예상 출력 형식:
 ```text
 [author lookup]
